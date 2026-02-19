@@ -213,6 +213,25 @@ class IndexMigrationsCommandTest extends TestCase
             ->assertFailed();
     }
 
+    public function testPathTraversalBlockedWithNonExistentParent(): void
+    {
+        $this->artisan('migrations:index', [
+            '--output' => '/nonexistent-abc/nonexistent-def/output',
+        ])
+            ->expectsOutputToContain('Output path must be within the project root directory')
+            ->assertFailed();
+    }
+
+    public function testPathWithNonExistentParentButValidGrandparent(): void
+    {
+        $outputPath = base_path('nonexistent-' . uniqid() . '/output');
+
+        $this->artisan('migrations:index', ['--output' => $outputPath])
+            ->assertSuccessful();
+
+        File::deleteDirectory(dirname($outputPath));
+    }
+
     // ── Config default path ───────────────────────────────────────
 
     public function testUsesConfigOutputPathWhenNoOutputOption(): void
