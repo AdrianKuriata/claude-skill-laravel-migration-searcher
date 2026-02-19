@@ -1,6 +1,6 @@
 <?php
 
-namespace YourVendor\LaravelMigrationSearcher\Services;
+namespace DevSite\LaravelMigrationSearcher\Services;
 
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;

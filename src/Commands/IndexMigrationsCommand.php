@@ -1,9 +1,9 @@
 <?php
 
-namespace YourVendor\LaravelMigrationSearcher\Commands;
+namespace DevSite\LaravelMigrationSearcher\Commands;
 
-use YourVendor\LaravelMigrationSearcher\Services\MigrationAnalyzer;
-use YourVendor\LaravelMigrationSearcher\Services\IndexGenerator;
+use DevSite\LaravelMigrationSearcher\Services\MigrationAnalyzer;
+use DevSite\LaravelMigrationSearcher\Services\IndexGenerator;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 

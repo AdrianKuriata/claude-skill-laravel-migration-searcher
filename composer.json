@@ -26,13 +26,13 @@
     },
     "autoload": {
         "psr-4": {
-            "YourVendor\\LaravelMigrationSearcher\\": "src/"
+            "DevSite\\LaravelMigrationSearcher\\": "src/"
         }
     },
     "extra": {
         "laravel": {
             "providers": [
-                "YourVendor\\LaravelMigrationSearcher\\MigrationSearcherServiceProvider"
+                "DevSite\\LaravelMigrationSearcher\\MigrationSearcherServiceProvider"
             ]
         }
     },

@@ -1,9 +1,9 @@
 <?php
 
-namespace YourVendor\LaravelMigrationSearcher;
+namespace DevSite\LaravelMigrationSearcher;
 
 use Illuminate\Support\ServiceProvider;
-use YourVendor\LaravelMigrationSearcher\Commands\IndexMigrationsCommand;
+use DevSite\LaravelMigrationSearcher\Commands\IndexMigrationsCommand;
 
 class MigrationSearcherServiceProvider extends ServiceProvider
 {
