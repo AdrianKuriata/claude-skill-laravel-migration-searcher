@@ -44,6 +44,11 @@ class IndexMigrationsCommand extends Command
         $outputPath = $this->option('output')
             ?: base_path(config('migration-searcher.output_path', '.claude/skills/laravel-migration-searcher'));
 
+        if (!$this->isPathWithinBase($outputPath)) {
+            $this->error('Output path must be within the project root directory.');
+            return Command::FAILURE;
+        }
+
         if ($this->option('refresh') && File::exists($outputPath)) {
             $this->warn('Cleaning existing index...');
             File::deleteDirectory($outputPath);
@@ -168,6 +173,21 @@ class IndexMigrationsCommand extends Command
         $this->newLine();
 
         return $migrations;
+    }
+
+    protected function isPathWithinBase(string $path): bool
+    {
+        $basePath = realpath(base_path());
+        $resolvedPath = realpath(dirname($path));
+
+        if ($resolvedPath === false) {
+            $resolvedPath = realpath(dirname(dirname($path)));
+            if ($resolvedPath === false) {
+                return false;
+            }
+        }
+
+        return str_starts_with($resolvedPath, $basePath);
     }
 
     protected function displaySummary(array $stats, string $outputPath): void

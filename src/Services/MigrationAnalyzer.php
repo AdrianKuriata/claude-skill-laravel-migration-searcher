@@ -26,6 +26,15 @@ class MigrationAnalyzer implements MigrationAnalyzerInterface
 
     public function analyze(string $filepath, string $type): array
     {
+        $maxFileSize = config('migration-searcher.max_file_size', 5242880);
+        $fileSize = File::size($filepath);
+
+        if ($fileSize > $maxFileSize) {
+            throw new \RuntimeException(
+                "File exceeds maximum allowed size ({$fileSize} bytes > {$maxFileSize} bytes)"
+            );
+        }
+
         $filename = basename($filepath);
         $content = File::get($filepath);
 

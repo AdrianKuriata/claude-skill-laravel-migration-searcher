@@ -12,7 +12,7 @@ class IndexMigrationsCommandTest extends TestCase
 
     protected function defineEnvironment($app): void
     {
-        $this->outputPath = sys_get_temp_dir() . '/cmd-test-output-' . uniqid();
+        $this->outputPath = $app->basePath('test-output-' . uniqid());
 
         $relativePath = 'test-migrations-' . uniqid();
         $this->migrationPath = $app->basePath($relativePath);
@@ -60,7 +60,7 @@ class IndexMigrationsCommandTest extends TestCase
 
     public function testOutputOptionOverridesConfig(): void
     {
-        $customOutput = sys_get_temp_dir() . '/custom-output-' . uniqid();
+        $customOutput = base_path('custom-output-' . uniqid());
 
         $this->artisan('migrations:index', ['--output' => $customOutput])
             ->assertSuccessful();
@@ -166,11 +166,12 @@ class IndexMigrationsCommandTest extends TestCase
 
     public function testHandlesEmptyDirectory(): void
     {
-        $emptyDir = sys_get_temp_dir() . '/empty-migrations-' . uniqid();
+        $emptyRelative = 'empty-migrations-' . uniqid();
+        $emptyDir = base_path($emptyRelative);
         mkdir($emptyDir, 0755, true);
 
         $this->app['config']->set('migration-searcher.migration_types', [
-            'default' => ['path' => $emptyDir],
+            'default' => ['path' => $emptyRelative],
         ]);
 
         $this->artisan('migrations:index', ['--output' => $this->outputPath])
@@ -203,15 +204,13 @@ class IndexMigrationsCommandTest extends TestCase
         $this->assertSame(0755, $perms);
     }
 
-    /**
-     * @group security-bug
-     */
     public function testPathTraversalBlocked(): void
     {
-        $this->markTestSkipped(
-            'SECURITY BUG: No path traversal validation on --output option. '
-            . 'Needs validation before File::makeDirectory() call.'
-        );
+        $this->artisan('migrations:index', [
+            '--output' => '/tmp/../tmp/traversal-test',
+        ])
+            ->expectsOutputToContain('Output path must be within the project root directory')
+            ->assertFailed();
     }
 
     // ── Config default path ───────────────────────────────────────

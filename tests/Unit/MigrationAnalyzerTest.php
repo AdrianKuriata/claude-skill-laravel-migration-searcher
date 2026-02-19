@@ -740,4 +740,35 @@ class MigrationAnalyzerTest extends TestCase
         $result = $this->analyzeContent($content);
         $this->assertTrue($result['has_data_modifications']);
     }
+
+    // ── File Size Limit ────────────────────────────────────────────
+
+    public function testThrowsExceptionWhenFileExceedsMaxSize(): void
+    {
+        $this->app['config']->set('migration-searcher.max_file_size', 50);
+
+        $content = str_repeat('x', 100);
+        $tmpDir = sys_get_temp_dir() . '/migration-size-test-' . uniqid();
+        mkdir($tmpDir, 0755, true);
+        $filepath = $tmpDir . '/2024_01_01_000000_large.php';
+        file_put_contents($filepath, $content);
+
+        try {
+            $this->expectException(\RuntimeException::class);
+            $this->expectExceptionMessage('File exceeds maximum allowed size');
+            $this->analyzer->analyze($filepath, 'default');
+        } finally {
+            @unlink($filepath);
+            @rmdir($tmpDir);
+        }
+    }
+
+    public function testAllowsFileWithinMaxSize(): void
+    {
+        $this->app['config']->set('migration-searcher.max_file_size', 5242880);
+
+        $result = $this->analyzeFixture('2024_08_01_100000_empty_migration.php');
+        $this->assertIsArray($result);
+        $this->assertArrayHasKey('filename', $result);
+    }
 }

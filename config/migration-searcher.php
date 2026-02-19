@@ -33,6 +33,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Max File Size (bytes)
+    |--------------------------------------------------------------------------
+    |
+    | Maximum file size in bytes for a single migration file to be parsed.
+    | Files exceeding this limit will be skipped with a warning.
+    | Default: 5MB (5242880 bytes)
+    |
+    */
+    'max_file_size' => 5242880,
+
+    /*
+    |--------------------------------------------------------------------------
     | Skill Template Path
     |--------------------------------------------------------------------------
     |

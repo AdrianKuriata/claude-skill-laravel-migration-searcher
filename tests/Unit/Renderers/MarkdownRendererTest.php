@@ -262,6 +262,41 @@ class MarkdownRendererTest extends TestCase
         $this->assertStringContainsString('## Raw SQL', $content);
     }
 
+    public function testEscapeHtmlPreventsHtmlInjection(): void
+    {
+        $this->assertSame(
+            '&lt;script>alert(1)&lt;/script>',
+            $this->renderer->escapeHtml('<script>alert(1)</script>')
+        );
+    }
+
+    public function testEscapeHtmlPreservesNormalCharacters(): void
+    {
+        $this->assertSame(
+            'Eloquent->save()',
+            $this->renderer->escapeHtml('Eloquent->save()')
+        );
+    }
+
+    public function testEscapeHtmlEscapesAmpersand(): void
+    {
+        $this->assertSame(
+            'foo &amp; bar',
+            $this->renderer->escapeHtml('foo & bar')
+        );
+    }
+
+    public function testFullIndexEscapesHtmlInTableNames(): void
+    {
+        $migration = $this->sampleMigration();
+        $migration['tables'] = ['<script>xss</script>' => ['operation' => 'CREATE', 'methods' => []]];
+
+        $content = $this->renderer->formatMigrationFull($migration);
+
+        $this->assertStringNotContainsString('<script>', $content);
+        $this->assertStringContainsString('&lt;script>', $content);
+    }
+
     public function testRenderStatsTableStatsTop50(): void
     {
         $migrations = [];
