@@ -6,7 +6,7 @@
 
 If publishing to Packagist:
 ```bash
-composer require devsite/ai-claude-skill-laravel-migration-searcher
+composer require devsite/claude-skill-laravel-migration-searcher
 ```
 
 If installing locally (for development):
@@ -21,7 +21,7 @@ If installing locally (for development):
         }
     ],
     "require": {
-        "devsite/ai-claude-skill-laravel-migration-searcher": "@dev"
+        "devsite/claude-skill-laravel-migration-searcher": "@dev"
     }
 }
 
@@ -52,7 +52,7 @@ return [
         ],
     ],
 
-    'skill_template_path' => __DIR__.'/../vendor/devsite/ai-claude-skill-laravel-migration-searcher/resources/skill-template/SKILL.md',
+    'skill_template_path' => __DIR__.'/../vendor/devsite/claude-skill-laravel-migration-searcher/resources/skill-template/SKILL.md',
 ];
 ```
 

@@ -1,5 +1,5 @@
 {
-    "name": "devsite/ai-claude-skill-laravel-migration-searcher",
+    "name": "devsite/claude-skill-laravel-migration-searcher",
     "description": "Intelligent Laravel migration indexer with Claude AI integration. Automatically analyzes and indexes all migrations for instant search and debugging.",
     "keywords": [
         "laravel",

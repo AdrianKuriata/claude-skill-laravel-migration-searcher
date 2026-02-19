@@ -65,7 +65,7 @@ composer require your-username/laravel-migration-searcher:dev-main
 
 # Or use local path
 composer config repositories.local '{"type": "path", "url": "../laravel-migration-searcher"}'
-composer require devsite/ai-claude-skill-laravel-migration-searcher:@dev
+composer require devsite/claude-skill-laravel-migration-searcher:@dev
 ```
 
 ## Questions?

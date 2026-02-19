@@ -1,9 +1,9 @@
 # Laravel Migration Searcher
 
 <p align="center">
-<a href="https://packagist.org/packages/devsite/ai-claude-skill-laravel-migration-searcher"><img src="https://img.shields.io/packagist/dt/devsite/ai-claude-skill-laravel-migration-searcher" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/devsite/ai-claude-skill-laravel-migration-searcher"><img src="https://img.shields.io/packagist/v/devsite/ai-claude-skill-laravel-migration-searcher" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/devsite/ai-claude-skill-laravel-migration-searcher"><img src="https://img.shields.io/packagist/l/devsite/ai-claude-skill-laravel-migration-searcher" alt="License"></a>
+<a href="https://packagist.org/packages/devsite/claude-skill-laravel-migration-searcher"><img src="https://img.shields.io/packagist/dt/devsite/claude-skill-laravel-migration-searcher" alt="Total Downloads"></a>
+<a href="https://packagist.org/packages/devsite/claude-skill-laravel-migration-searcher"><img src="https://img.shields.io/packagist/v/devsite/claude-skill-laravel-migration-searcher" alt="Latest Stable Version"></a>
+<a href="https://packagist.org/packages/devsite/claude-skill-laravel-migration-searcher"><img src="https://img.shields.io/packagist/l/devsite/claude-skill-laravel-migration-searcher" alt="License"></a>
 </p>
 
 Intelligent Laravel migration indexer with Claude AI integration. Automatically analyzes and indexes all migrations for instant search and debugging.
@@ -54,7 +54,7 @@ The package performs **comprehensive analysis** of each migration:
 Install via Composer:
 
 ```bash
-composer require devsite/ai-claude-skill-laravel-migration-searcher
+composer require devsite/claude-skill-laravel-migration-searcher
 ```
 
 Publish configuration:
@@ -194,7 +194,7 @@ Claude will automatically search the index and give you exact answers with full 
 
 ```bash
 # 1. Install package
-composer require devsite/ai-claude-skill-laravel-migration-searcher
+composer require devsite/claude-skill-laravel-migration-searcher
 
 # 2. Publish config and customize if needed
 php artisan vendor:publish --tag=migration-searcher-config
@@ -312,7 +312,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## Support
 
-- Issues: [GitHub Issues](https://github.com/devsite/ai-claude-skill-laravel-migration-searcher/issues)
+- Issues: [GitHub Issues](https://github.com/devsite/claude-skill-laravel-migration-searcher/issues)
 - Documentation: This README
 - Questions: Open a discussion on GitHub
 
