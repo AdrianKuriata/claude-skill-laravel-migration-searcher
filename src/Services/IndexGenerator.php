@@ -4,9 +4,6 @@ namespace YourVendor\LaravelMigrationSearcher\Services;
 
 use Illuminate\Support\Facades\File;
 
-/**
- * Generator różnych widoków indeksu migracji
- */
 class IndexGenerator
 {
     protected array $migrations = [];
@@ -16,18 +13,12 @@ class IndexGenerator
     {
         $this->outputPath = rtrim($outputPath, '/');
     }
-
-    /**
-     * Ustawia dane migracji do wygenerowania indeksów
-     */
+    
     public function setMigrations(array $migrations): void
     {
         $this->migrations = $migrations;
     }
-
-    /**
-     * Generuje wszystkie indeksy
-     */
+    
     public function generateAll(): array
     {
         $generated = [];
@@ -45,10 +36,7 @@ class IndexGenerator
 
         return $generated;
     }
-
-    /**
-     * Generuje pełny indeks - wszystkie migracje chronologicznie
-     */
+    
     protected function generateFullIndex(): string
     {
         $filepath = $this->outputPath . '/index-full.md';
@@ -69,10 +57,7 @@ class IndexGenerator
         File::put($filepath, $content);
         return $filepath;
     }
-
-    /**
-     * Generuje indeks pogrupowany po typie (system/instances/before/after)
-     */
+    
     protected function generateByTypeIndex(): string
     {
         $filepath = $this->outputPath . '/index-by-type.md';
@@ -112,10 +97,7 @@ class IndexGenerator
         File::put($filepath, $content);
         return $filepath;
     }
-
-    /**
-     * Generuje indeks pogrupowany po tabelach
-     */
+    
     protected function generateByTableIndex(): string
     {
         $filepath = $this->outputPath . '/index-by-table.md';
@@ -169,10 +151,7 @@ class IndexGenerator
         File::put($filepath, $content);
         return $filepath;
     }
-
-    /**
-     * Generuje indeks pogrupowany po operacjach (CREATE/ALTER/DATA)
-     */
+    
     protected function generateByOperationIndex(): string
     {
         $filepath = $this->outputPath . '/index-by-operation.md';
@@ -265,10 +244,7 @@ class IndexGenerator
         File::put($filepath, $content);
         return $filepath;
     }
-
-    /**
-     * Generuje statystyki w JSON
-     */
+    
     protected function generateStats(): string
     {
         $filepath = $this->outputPath . '/stats.json';
@@ -295,10 +271,7 @@ class IndexGenerator
         File::put($filepath, json_encode($stats, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
         return $filepath;
     }
-
-    /**
-     * Zbiera statystyki tabel
-     */
+    
     protected function getTableStats(): array
     {
         $tables = [];
@@ -322,10 +295,7 @@ class IndexGenerator
 
         return array_slice($tables, 0, 50); // Top 50 tabel
     }
-
-    /**
-     * Formatuje pełny wpis migracji
-     */
+    
     protected function formatMigrationFull(array $migration): string
     {
         $content = "### {$migration['filename']}\n\n";
@@ -481,10 +451,7 @@ class IndexGenerator
 
         return $content;
     }
-
-    /**
-     * Formatuje kompaktowy wpis migracji
-     */
+    
     protected function formatMigrationCompact(array $migration): string
     {
         $content = "### {$migration['filename']}\n\n";
@@ -504,10 +471,7 @@ class IndexGenerator
 
         return $content;
     }
-
-    /**
-     * Formatuje podsumowanie operacji DML
-     */
+    
     protected function formatDMLSummary(array $dmlOperations): string
     {
         $summary = collect($dmlOperations)->groupBy('type')->map(fn($ops) => count($ops));

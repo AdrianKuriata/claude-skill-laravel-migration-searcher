@@ -5,9 +5,6 @@ namespace YourVendor\LaravelMigrationSearcher\Services;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 
-/**
- * Analizator migracji Laravel - wykonuje pełną analizę struktury i operacji w migracji
- */
 class MigrationAnalyzer
 {
     protected array $result = [];
@@ -15,10 +12,7 @@ class MigrationAnalyzer
     protected string $filename = '';
     protected string $filepath = '';
     protected string $type = '';
-
-    /**
-     * Analizuje pojedynczą migrację i zwraca pełne dane
-     */
+    
     public function analyze(string $filepath, string $type): array
     {
         $this->filepath = $filepath;
@@ -48,10 +42,7 @@ class MigrationAnalyzer
 
         return $this->result;
     }
-
-    /**
-     * Wyciąga timestamp z nazwy migracji
-     */
+    
     protected function extractTimestamp(): string
     {
         if (preg_match('/^(\d{4}_\d{2}_\d{2}_\d{6})_/', $this->filename, $matches)) {
@@ -59,19 +50,13 @@ class MigrationAnalyzer
         }
         return 'unknown';
     }
-
-    /**
-     * Wyciąga czytelną nazwę migracji
-     */
+    
     protected function extractMigrationName(): string
     {
         return preg_replace('/^\d{4}_\d{2}_\d{2}_\d{6}_/', '', 
                            str_replace('.php', '', $this->filename));
     }
-
-    /**
-     * Znajduje wszystkie tabele używane w migracji
-     */
+    
     protected function extractTables(): array
     {
         $tables = [];
@@ -117,15 +102,11 @@ class MigrationAnalyzer
 
         return $tables;
     }
-
-    /**
-     * Wyciąga operacje DDL (Data Definition Language) - zmiany struktury
-     */
+    
     protected function extractDDLOperations(): array
     {
         $operations = [];
 
-        // Wszystkie metody Blueprint
         $blueprintMethods = [
             'id', 'foreignId', 'bigIncrements', 'bigInteger', 'binary', 'boolean',
             'char', 'dateTimeTz', 'dateTime', 'date', 'decimal', 'double',
@@ -161,11 +142,7 @@ class MigrationAnalyzer
 
         return $operations;
     }
-
-    /**
-     * Wyciąga operacje DML (Data Manipulation Language) - modyfikacje danych
-     * Wersja 2.0 - obsługuje Eloquent, pętle, DB::raw, złożone warunki
-     */
+    
     protected function extractDMLOperations(): array
     {
         $operations = [];
@@ -244,7 +221,7 @@ class MigrationAnalyzer
             }
         }
 
-        // 4. Model::create - statyczne wywołania
+        // 4. Model::create - static call
         if (preg_match_all(
             '/\\\\?App\\\\[^:]+::create\s*\(/s',
             $this->content,
@@ -351,10 +328,7 @@ class MigrationAnalyzer
 
         return $operations;
     }
-
-    /**
-     * Wyciąga warunki WHERE z łańcucha metod - ROZSZERZONA WERSJA
-     */
+    
     protected function extractWhereConditions(string $chainedMethods): array
     {
         $conditions = [];
@@ -446,10 +420,7 @@ class MigrationAnalyzer
 
         return $conditions;
     }
-
-    /**
-     * Wyciąga nazwy kolumn z array'a danych
-     */
+    
     protected function extractColumnsFromArray(string $arrayContent): array
     {
         $columns = [];
@@ -461,10 +432,7 @@ class MigrationAnalyzer
 
         return $columns;
     }
-
-    /**
-     * Czyści i skraca preview danych
-     */
+    
     protected function cleanupDataPreview(string $data, int $maxLength = 100): string
     {
         $data = trim($data);
@@ -478,10 +446,7 @@ class MigrationAnalyzer
         
         return $data;
     }
-
-    /**
-     * Wyciąga surowy SQL (DB::statement, DB::raw, itp)
-     */
+    
     protected function extractRawSQL(): array
     {
         $sql = [];
@@ -536,10 +501,7 @@ class MigrationAnalyzer
 
         return $sql;
     }
-
-    /**
-     * Formatuje SQL - usuwa nadmiarowe białe znaki ale zachowuje czytelność
-     */
+    
     protected function formatSQL(string $sql): string
     {
         // Usuń leading/trailing whitespace
@@ -555,10 +517,7 @@ class MigrationAnalyzer
         
         return $sql;
     }
-
-    /**
-     * Wykrywa typ operacji SQL
-     */
+    
     protected function detectSQLOperation(string $sql): string
     {
         $sql = strtoupper(trim($sql));
@@ -574,10 +533,7 @@ class MigrationAnalyzer
         
         return 'OTHER';
     }
-
-    /**
-     * Wyciąga zależności między migracjami (komentarze, wymienione pliki, itp)
-     */
+    
     protected function extractDependencies(): array
     {
         $dependencies = [];
@@ -609,10 +565,7 @@ class MigrationAnalyzer
 
         return $dependencies;
     }
-
-    /**
-     * Wyciąga wszystkie kolumny i ich definicje
-     */
+    
     protected function extractColumns(): array
     {
         $columns = [];
@@ -641,10 +594,7 @@ class MigrationAnalyzer
 
         return $columns;
     }
-
-    /**
-     * Wyciąga modyfikatory kolumn (nullable, default, unique, itp)
-     */
+    
     protected function extractColumnModifiers(string $columnDefinition): array
     {
         $modifiers = [];
@@ -670,10 +620,7 @@ class MigrationAnalyzer
 
         return $modifiers;
     }
-
-    /**
-     * Wyciąga indeksy
-     */
+    
     protected function extractIndexes(): array
     {
         $indexes = [];
@@ -694,10 +641,7 @@ class MigrationAnalyzer
 
         return $indexes;
     }
-
-    /**
-     * Wyciąga foreign keys
-     */
+    
     protected function extractForeignKeys(): array
     {
         $foreignKeys = [];
@@ -715,10 +659,7 @@ class MigrationAnalyzer
 
         return $foreignKeys;
     }
-
-    /**
-     * Wyciąga wszystkie użyte metody (dla statystyk)
-     */
+    
     protected function extractMethodsUsed(): array
     {
         $methods = [];
@@ -729,10 +670,7 @@ class MigrationAnalyzer
 
         return array_values($methods);
     }
-
-    /**
-     * Sprawdza czy migracja modyfikuje dane
-     */
+    
     protected function hasDataModifications(): bool
     {
         return !empty($this->extractDMLOperations()) || 
@@ -742,10 +680,7 @@ class MigrationAnalyzer
                strpos($this->content, '::update(') !== false ||
                strpos($this->content, '::insert(') !== false;
     }
-
-    /**
-     * Oblicza złożoność migracji (1-10)
-     */
+    
     protected function calculateComplexity(): int
     {
         $score = 0;
@@ -767,10 +702,7 @@ class MigrationAnalyzer
 
         return min(10, max(1, (int) round($score)));
     }
-
-    /**
-     * Kategoryzuje metodę Blueprint
-     */
+    
     protected function categorizeMethod(string $method): string
     {
         $categories = [
@@ -793,10 +725,7 @@ class MigrationAnalyzer
 
         return 'other';
     }
-
-    /**
-     * Parsuje parametry metody
-     */
+    
     protected function parseMethodParams(string $params): array
     {
         $params = trim($params);
@@ -808,10 +737,7 @@ class MigrationAnalyzer
         $parts = explode(',', $params);
         return array_map('trim', $parts);
     }
-
-    /**
-     * Zwraca relatywną ścieżkę
-     */
+    
     protected function getRelativePath(string $filepath): string
     {
         // Usuwa base_path() z początku
