@@ -247,7 +247,7 @@ Each migration in the full index contains:
 ## Testing
 
 ```bash
-docker compose -f docker-compose.test.yml up --build
+docker compose -f docker-compose.test.yml up --build --abort-on-container-exit --remove-orphans && docker compose -f docker-compose.test.yml down
 ```
 
 ## License
