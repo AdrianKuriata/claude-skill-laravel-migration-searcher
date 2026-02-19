@@ -26,33 +26,24 @@ class MarkdownRenderer
         $content = "# Migrations Index - Grouped by Type\n\n";
         $content .= "**Generated:** " . now()->format('Y-m-d H:i:s') . "\n\n";
 
-        $types = [
-            'system' => 'System Migrations (database/migrations)',
-            'instances' => 'Instance Migrations (database/instances/migrations)',
-            'before' => 'BEFORE Import Migrations (app/Console/Commands/ImportInstance/migrations/before)',
-            'after' => 'AFTER Import Migrations (app/Console/Commands/ImportInstance/migrations/after)',
-        ];
+        $grouped = collect($migrations)->groupBy('type')->sortKeys();
 
-        foreach ($types as $type => $description) {
-            $typeMigrations = collect($migrations)
-                ->filter(fn($m) => $m['type'] === $type)
-                ->sortBy('timestamp')
-                ->values()
-                ->all();
+        foreach ($grouped as $type => $typeMigrations) {
+            $sorted = $typeMigrations->sortBy('timestamp')->values()->all();
 
-            $content .= "## {$description}\n\n";
-            $content .= "**Count:** " . count($typeMigrations) . "\n\n";
+            $content .= "## {$type}\n\n";
+            $content .= "**Count:** " . count($sorted) . "\n\n";
 
-            if (count($typeMigrations) > 0) {
-                foreach ($typeMigrations as $migration) {
-                    $content .= $this->formatMigrationCompact($migration);
-                    $content .= "\n";
-                }
-            } else {
-                $content .= "*No migrations of this type*\n";
+            foreach ($sorted as $migration) {
+                $content .= $this->formatMigrationCompact($migration);
+                $content .= "\n";
             }
 
             $content .= "\n---\n\n";
+        }
+
+        if ($grouped->isEmpty()) {
+            $content .= "*No migrations found*\n\n";
         }
 
         return $content;
@@ -201,12 +192,7 @@ class MarkdownRenderer
         $stats = [
             'generated_at' => now()->toIso8601String(),
             'total_migrations' => count($migrations),
-            'by_type' => [
-                'system' => collect($migrations)->where('type', 'system')->count(),
-                'instances' => collect($migrations)->where('type', 'instances')->count(),
-                'before' => collect($migrations)->where('type', 'before')->count(),
-                'after' => collect($migrations)->where('type', 'after')->count(),
-            ],
+            'by_type' => collect($migrations)->groupBy('type')->map->count()->sortKeys()->all(),
             'tables' => $this->getTableStats($migrations),
             'complexity' => [
                 'average' => round(collect($migrations)->avg('complexity'), 2),

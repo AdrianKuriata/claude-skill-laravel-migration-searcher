@@ -578,14 +578,24 @@ class IndexGeneratorTest extends TestCase
         $this->assertStringContainsString('system_migration.php', $content);
     }
 
-    public function testByTypeIndexShowsNoMigrationsForEmptyType(): void
+    public function testByTypeIndexShowsNoMigrationsMessage(): void
+    {
+        $this->generator->setMigrations([]);
+        $this->generator->generateAll();
+
+        $content = file_get_contents($this->outputPath . '/index-by-type.md');
+
+        $this->assertStringContainsString('*No migrations found*', $content);
+    }
+
+    public function testByTypeIndexGroupsDynamically(): void
     {
         $this->generator->setMigrations($this->sampleMigrations());
         $this->generator->generateAll();
 
         $content = file_get_contents($this->outputPath . '/index-by-type.md');
 
-        $this->assertStringContainsString('*No migrations of this type*', $content);
+        $this->assertStringContainsString('## default', $content);
     }
 
     // ── Full index — DML branches ───────────────────────────────────

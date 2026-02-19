@@ -52,9 +52,14 @@ class MarkdownRendererTest extends TestCase
 
     public function testRenderByTypeIndexContainsTypeHeaders(): void
     {
+        $content = $this->renderer->renderByTypeIndex([$this->sampleMigration()]);
+        $this->assertStringContainsString('## default', $content);
+    }
+
+    public function testRenderByTypeIndexEmptyShowsNoMigrations(): void
+    {
         $content = $this->renderer->renderByTypeIndex([]);
-        $this->assertStringContainsString('System Migrations', $content);
-        $this->assertStringContainsString('*No migrations of this type*', $content);
+        $this->assertStringContainsString('*No migrations found*', $content);
     }
 
     public function testRenderByTableIndexGroupsByTable(): void
