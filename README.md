@@ -12,46 +12,45 @@ Intelligent Laravel migration indexer with Claude AI integration. Automatically 
 
 **Problem:** You have hundreds or thousands of migrations. Finding specific migrations is time-consuming and error-prone.
 
-**Solution:** This package automatically analyzes **all** migrations and creates searchable indexes that Claude AI (or you) can query instantly.
+**Solution:** This package automatically analyzes **all** migrations and creates searchable markdown indexes that Claude AI (or you) can query instantly.
 
 ## Features
 
-✅ **Deep Analysis** - Analyzes DDL, DML, Raw SQL, Eloquent operations, loops  
-✅ **Multiple Views** - Chronological, by-type, by-table, by-operation  
-✅ **Claude AI Integration** - Built for Claude AI workflow  
-✅ **Configurable** - Support for custom migration paths and types  
-✅ **Team-Friendly** - Index in git, whole team benefits  
-✅ **Zero Dependencies** - Only Laravel required  
+- **Deep Analysis** - Analyzes DDL, DML, Raw SQL, Eloquent operations, loops
+- **Multiple Views** - Chronological, by-type, by-table, by-operation indexes
+- **Claude AI Integration** - Ships with SKILL.md template for Claude AI workflow
+- **Complexity Scoring** - Each migration gets a 1-10 complexity score
+- **Configurable** - Support for custom migration paths and types
+- **Team-Friendly** - Commit indexes to git, whole team benefits
+- **Zero Dependencies** - Only Laravel required
 
 ## What It Analyzes
 
-The package performs **comprehensive analysis** of each migration:
+The package performs comprehensive static analysis of each migration file:
 
 ### DDL Operations (Structure)
-- CREATE/ALTER/DROP tables
-- Column definitions with types and modifiers
+- CREATE/ALTER/DROP/RENAME tables
+- Column definitions with types and modifiers (nullable, default, unique, etc.)
 - Indexes (index, unique, primary)
-- Foreign keys with dependencies
+- Foreign keys with dependency tracking
 
-### DML Operations (Data) - v2.0
+### DML Operations (Data)
 - INSERT/UPDATE/DELETE via `DB::table()`
-- **WHERE conditions** - including whereIn, whereNotNull, whereHas, orWhere
-- **Columns modified** - which fields are changed
-- **DB::raw expressions** - full SQL (CASE WHEN, subqueries, etc.)
-- **Eloquent operations** - Model::create, ->save(), ->delete()
-- **Operations in loops** - foreach/while with data modifications
-- **Mass operations** - whereIn with arrays of IDs
+- WHERE conditions - `where`, `whereIn`, `whereNotIn`, `whereNull`, `whereNotNull`, `whereBetween`, `whereHas`, `whereDoesntHave`, `orWhere`
+- Columns modified in UPDATE operations
+- `DB::raw` expressions (CASE WHEN, subqueries, etc.)
+- Eloquent operations - `Model::create()`, `->save()`, `->delete()`
+- Relationship operations - `->relation()->create()`, `->relation()->createMany()`
+- Operations inside loops (foreach with save/create/delete/update)
 
 ### Raw SQL
-- DB::statement - complete SQL queries
-- DB::unprepared - full SQL code
-- DB::raw expressions
-- Heredoc/Nowdoc SQL
-- **Auto-detected type** (SELECT/UPDATE/DELETE/etc.)
+- `DB::statement()` - complete SQL queries
+- `DB::unprepared()` - full SQL code
+- `DB::raw()` expressions
+- Heredoc/Nowdoc SQL blocks
+- Auto-detected operation type (SELECT/INSERT/UPDATE/DELETE/CREATE/ALTER/DROP/TRUNCATE)
 
 ## Installation
-
-Install via Composer:
 
 ```bash
 composer require devsite/claude-skill-laravel-migration-searcher
@@ -63,7 +62,7 @@ Publish configuration:
 php artisan vendor:publish --tag=migration-searcher-config
 ```
 
-Publish skill template (optional):
+Publish skill template (optional - auto-copied on first run):
 
 ```bash
 php artisan vendor:publish --tag=migration-searcher-skill
@@ -75,20 +74,18 @@ Edit `config/migration-searcher.php`:
 
 ```php
 return [
-    // Where indexes will be generated
+    // Where indexes will be generated (relative to project root)
     'output_path' => '.claude/skills/laravel-migration-searcher',
-    
+
     // Define your migration types
     'migration_types' => [
         'default' => [
             'path' => 'database/migrations',
         ],
-        
-        // Add custom types:
-        // 'tenant' => [
-        //     'path' => 'database/tenant-migrations',
-        // ],
     ],
+
+    // Path to SKILL.md template
+    'skill_template_path' => '...',
 ];
 ```
 
@@ -100,7 +97,7 @@ return [
 # Index all migrations
 php artisan migrations:index
 
-# Refresh existing index
+# Refresh existing index (deletes and regenerates)
 php artisan migrations:index --refresh
 
 # Index specific type only
@@ -110,39 +107,36 @@ php artisan migrations:index --type=default
 php artisan migrations:index --output=/custom/path
 ```
 
-### Output
-
-The command generates:
+### Generated Output
 
 ```
 .claude/skills/laravel-migration-searcher/
-├── SKILL.md                    # Instructions for Claude AI
-├── index-full.md               # Chronological list
-├── index-by-type.md           # Grouped by migration type
-├── index-by-table.md          # Grouped by database table
-├── index-by-operation.md      # Grouped by operation type
-└── stats.json                 # Statistics and metadata
+├── SKILL.md               # Instructions for Claude AI
+├── index-full.md          # Chronological list with full details
+├── index-by-type.md       # Grouped by migration type
+├── index-by-table.md      # Grouped by database table
+├── index-by-operation.md  # Grouped by operation (CREATE/ALTER/DROP/DATA/RENAME)
+└── stats.json             # Statistics and metadata (JSON)
 ```
 
 ### Using with Claude AI
 
-1. **Generate index:**
+1. Generate index:
    ```bash
    php artisan migrations:index
    ```
 
-2. **Upload to Claude:**
-   - Upload all files from `.claude/skills/laravel-migration-searcher/` to claude.ai
-   - Or use Claude Code with local access
+2. Upload to Claude:
+   - Upload files from `.claude/skills/laravel-migration-searcher/` to claude.ai
+   - Or use Claude Code with local file access
 
-3. **Ask Claude:**
+3. Ask Claude:
    ```
    "Find the migration that adds subscription_plan column"
    "Which migration deletes records from orders?"
    "Show all migrations with DB::raw"
+   "What will break if I remove the create_users migration?"
    ```
-
-Claude will automatically search the index and give you exact answers with full context!
 
 ## Configuration Examples
 
@@ -190,19 +184,12 @@ Claude will automatically search the index and give you exact answers with full 
 
 ## Team Workflow
 
-### First Developer (Setup)
+### Initial Setup
 
 ```bash
-# 1. Install package
 composer require devsite/claude-skill-laravel-migration-searcher
-
-# 2. Publish config and customize if needed
 php artisan vendor:publish --tag=migration-searcher-config
-
-# 3. Generate index
 php artisan migrations:index
-
-# 4. Commit to git
 git add .claude/ config/migration-searcher.php
 git commit -m "Add migration indexer"
 git push
@@ -211,96 +198,57 @@ git push
 ### Other Team Members
 
 ```bash
-# 1. Pull changes
 git pull
-
-# 2. Index is already there!
-# Each developer can upload to their Claude instance
+# Index is already in the repo - upload to Claude or use Claude Code
 ```
 
-### Daily Workflow
+### After Adding/Modifying Migrations
 
 ```bash
-# After adding/modifying migrations
-php artisan make:migration add_feature
 php artisan migrations:index --refresh
-git add database/migrations/ .claude/
-git commit -m "Add feature migration"
-git push
+git add .claude/
+git commit -m "Refresh migration index"
 ```
 
-## Examples
+## Index Entry Example
 
-### Finding a Migration
-
-```
-Q: "Which migration adds the email_verified_at column?"
-
-A: Claude reads index-by-table.md → finds users section → responds:
-
-Found: database/migrations/2020_01_01_000000_create_users_table.php
-This migration creates the users table including email_verified_at column.
-```
-
-### Debugging Data Issues
-
-```
-Q: "After migrations, subscription dates are NULL. Find the problem."
-
-A: Claude reads index-by-operation.md → finds UPDATE operations → responds:
-
-Problem in: database/migrations/2023_05_12_prepare_data.php
-
-DML Operations:
-- UPDATE on users WHERE: subscription_plan IS NULL
-  - Sets subscription_expires_at to NULL
-
-This migration resets the dates! Check if it should run in your environment.
-```
-
-### Finding Complex Operations
-
-```
-Q: "Show migrations that use CASE WHEN in UPDATE"
-
-A: Claude searches for DB::raw in UPDATE operations → responds:
-
-Found: database/migrations/2024_01_20_calculate_status.php
-
-Uses DB::raw:
-  CASE WHEN (condition1) THEN 1 ELSE 0 END
-
-This migration calculates status based on multiple conditions.
-```
-
-## Index Structure Example
+Each migration in the full index contains:
 
 ```markdown
-### 2024_01_15_add_subscription_plan.php
+### 2024_01_15_143022_add_subscription_plan_to_users.php
 
 **Type:** default
-**Path:** database/migrations/2024_01_15_add_subscription_plan.php
+**Path:** database/migrations/2024_01_15_143022_add_subscription_plan_to_users.php
+**Timestamp:** 2024_01_15_143022
+**Complexity:** 3/10
 
 **Tables:**
-- users (ALTER)
+- `users` (ALTER)
+
+**Columns:**
+- `subscription_plan` (string [nullable])
+- `subscription_expires_at` (timestamp [nullable])
 
 **DDL Operations:**
-- addColumn: subscription_plan (string, nullable)
-- addColumn: subscription_expires_at (timestamp, nullable)
+- **column_create:** 2 operations
 
 **DML Operations:**
 - **UPDATE** on `users`
   - WHERE: subscription_plan IS NULL
   - Columns: subscription_plan
   - Data: ['subscription_plan' => 'free']
-
-**Complexity:** 3/10
 ```
 
 ## Requirements
 
-- PHP 8.1 or higher
+- PHP 8.1 - 8.3
 - Laravel 10.x, 11.x, or 12.x
+
+## Testing
+
+```bash
+docker compose -f docker-compose.test.yml up --build
+```
 
 ## License
 
@@ -312,14 +260,9 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## Support
 
-- Issues: [GitHub Issues](https://github.com/devsite/claude-skill-laravel-migration-searcher/issues)
-- Documentation: This README
+- Issues: [GitHub Issues](https://github.com/AdrianKuriata/claude-skill-laravel-migration-searcher/issues)
 - Questions: Open a discussion on GitHub
 
-## Credits
+## Author
 
-Built for Laravel projects with large migration sets that need intelligent search and documentation.
-
----
-
-**Made with ❤️ for the Laravel community**
+**Adrian Kuriata** - [GitHub](https://github.com/AdrianKuriata)
