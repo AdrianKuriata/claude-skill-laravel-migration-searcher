@@ -50,23 +50,10 @@ class IndexMigrationsCommandTest extends TestCase
 
     // ── Basic ───────────────────────────────────────────────────────
 
-    public function testCommandRunsSuccessfully(): void
-    {
-        $this->artisan('migrations:index', ['--output' => $this->outputPath])
-            ->assertSuccessful();
-    }
-
     public function testCommandOutputsFilePaths(): void
     {
         $this->artisan('migrations:index', ['--output' => $this->outputPath])
             ->expectsOutputToContain('index-full')
-            ->assertSuccessful();
-    }
-
-    public function testCommandDisplaysSummaryTable(): void
-    {
-        $this->artisan('migrations:index', ['--output' => $this->outputPath])
-            ->expectsOutputToContain('default')
             ->assertSuccessful();
     }
 

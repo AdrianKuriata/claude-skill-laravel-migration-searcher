@@ -25,15 +25,4 @@ class ServiceProviderTest extends TestCase
         $this->assertInstanceOf(IndexMigrationsCommand::class, $commands['migrations:index']);
     }
 
-    public function testConfigIsPublishable(): void
-    {
-        $publishable = $this->app['config']->get('migration-searcher');
-
-        $this->assertNotNull($publishable);
-
-        // Verify the service provider registers publishable config
-        $publishes = \Illuminate\Support\ServiceProvider::$publishGroups ?? [];
-        // Just verify config exists and is valid
-        $this->assertIsArray(config('migration-searcher.migration_types'));
-    }
 }

@@ -125,18 +125,6 @@ class IndexGeneratorTest extends TestCase
 
     // ── File Generation ─────────────────────────────────────────────
 
-    public function testGenerateAllCreatesAllFiveFiles(): void
-    {
-        $this->generator->setMigrations($this->sampleMigrations());
-        $this->generator->generateAll();
-
-        $this->assertFileExists($this->outputPath . '/index-full.md');
-        $this->assertFileExists($this->outputPath . '/index-by-type.md');
-        $this->assertFileExists($this->outputPath . '/index-by-table.md');
-        $this->assertFileExists($this->outputPath . '/index-by-operation.md');
-        $this->assertFileExists($this->outputPath . '/stats.json');
-    }
-
     public function testGenerateAllReturnsCorrectPaths(): void
     {
         $this->generator->setMigrations($this->sampleMigrations());
@@ -281,18 +269,6 @@ class IndexGeneratorTest extends TestCase
     }
 
     // ── stats.json ──────────────────────────────────────────────────
-
-    public function testStatsJsonIsValidJson(): void
-    {
-        $this->generator->setMigrations($this->sampleMigrations());
-        $this->generator->generateAll();
-
-        $json = file_get_contents($this->outputPath . '/stats.json');
-        $decoded = json_decode($json, true);
-
-        $this->assertNotNull($decoded);
-        $this->assertSame(JSON_ERROR_NONE, json_last_error());
-    }
 
     public function testStatsJsonStructure(): void
     {

@@ -241,7 +241,7 @@ Each migration in the full index contains:
 
 ## Requirements
 
-- PHP 8.1 - 8.3
+- PHP 8.1 - 8.4
 - Laravel 10.x, 11.x, or 12.x
 
 ## Testing
