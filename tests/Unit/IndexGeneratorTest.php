@@ -238,7 +238,7 @@ class IndexGeneratorTest extends TestCase
 
         $content = file_get_contents($this->outputPath . '/index-by-table.md');
 
-        $this->assertStringContainsString('## Tabela: `users`', $content);
+        $this->assertStringContainsString('## Table: `users`', $content);
     }
 
     public function testByTableSortedAlphabetically(): void
@@ -251,8 +251,8 @@ class IndexGeneratorTest extends TestCase
 
         $content = file_get_contents($this->outputPath . '/index-by-table.md');
 
-        $posAccounts = strpos($content, '## Tabela: `accounts`');
-        $posUsers = strpos($content, '## Tabela: `users`');
+        $posAccounts = strpos($content, '## Table: `accounts`');
+        $posUsers = strpos($content, '## Table: `users`');
 
         $this->assertLessThan($posUsers, $posAccounts);
     }
@@ -266,8 +266,8 @@ class IndexGeneratorTest extends TestCase
 
         $content = file_get_contents($this->outputPath . '/index-by-operation.md');
 
-        $this->assertStringContainsString('Tworzenie Tabel (CREATE)', $content);
-        $this->assertStringContainsString('Modyfikacje Danych (DATA)', $content);
+        $this->assertStringContainsString('Table Creation (CREATE)', $content);
+        $this->assertStringContainsString('Data Modifications (DATA)', $content);
     }
 
     public function testByOperationRawSqlSection(): void
@@ -423,6 +423,6 @@ class IndexGeneratorTest extends TestCase
 
         $content = file_get_contents($generated['by_table']);
         // Should still be a valid file, just with no table sections
-        $this->assertStringContainsString('Grupowanie po Tabelach', $content);
+        $this->assertStringContainsString('Grouped by Tables', $content);
     }
 }

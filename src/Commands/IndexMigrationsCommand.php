@@ -26,10 +26,7 @@ class IndexMigrationsCommand extends Command
      * Migration type configurations loaded from config
      */
     protected array $migrationTypes = [];
-
-    /**
-     * Execute the console command.
-     */
+    
     public function handle()
     {
         $this->info('🔍 Starting Laravel migration indexing...');
@@ -121,9 +118,6 @@ class IndexMigrationsCommand extends Command
         return Command::SUCCESS;
     }
 
-    /**
-     * Determine which migration types to index
-     */
     protected function determineTypesToIndex(): array
     {
         if ($type = $this->option('type')) {
@@ -138,9 +132,6 @@ class IndexMigrationsCommand extends Command
         return array_keys($this->migrationTypes);
     }
 
-    /**
-     * Index migrations of specific type
-     */
     protected function indexMigrationType(string $type): array
     {
         $typeConfig = $this->migrationTypes[$type];
@@ -185,9 +176,6 @@ class IndexMigrationsCommand extends Command
         return $migrations;
     }
 
-    /**
-     * Display summary
-     */
     protected function displaySummary(array $stats, string $outputPath): void
     {
         $this->info('📈 Summary:');
@@ -212,10 +200,7 @@ class IndexMigrationsCommand extends Command
         $this->line('   3. Team does git pull and has access to index');
         $this->line('   4. Each developer can upload files to their Claude');
     }
-
-    /**
-     * Formatuje rozmiar pliku
-     */
+    
     protected function formatFileSize(int $bytes): string
     {
         $units = ['B', 'KB', 'MB', 'GB'];

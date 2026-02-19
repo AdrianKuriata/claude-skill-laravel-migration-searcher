@@ -57,11 +57,11 @@ Currently, the package doesn't have automated tests. When adding features:
 
 ```bash
 # Clone your fork
-git clone https://github.com/your-username/laravel-migration-searcher.git
+git clone https://github.com/AdrianKuriata/claude-skill-laravel-migration-searcher.git
 
 # Install in a Laravel project for testing
 # In your Laravel project:
-composer require your-username/laravel-migration-searcher:dev-main
+composer require devsite/claude-skill-laravel-migration-searcher
 
 # Or use local path
 composer config repositories.local '{"type": "path", "url": "../laravel-migration-searcher"}'

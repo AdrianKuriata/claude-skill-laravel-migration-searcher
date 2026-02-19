@@ -91,7 +91,7 @@ class MigrationAnalyzer
             }
         }
 
-        // DB::table (operacje na danych)
+        // DB::table (data operations)
         if (preg_match_all('/DB::table\s*\(\s*[\'"]([^"\']+)[\'"]/', $this->content, $matches)) {
             foreach ($matches[1] as $table) {
                 if (!isset($tables[$table])) {
@@ -147,7 +147,7 @@ class MigrationAnalyzer
     {
         $operations = [];
 
-        // 1. DB::table()->update - PODSTAWOWE + Z DB::raw
+        // 1. DB::table()->update - BASIC + WITH DB::raw
         if (preg_match_all(
             '/DB::table\([\'"]([^"\']+)[\'"]\)((?:[^;])+?)->update\s*\(\s*(\[[^\]]*\])/s',
             $this->content,
@@ -159,11 +159,11 @@ class MigrationAnalyzer
                 $chainedMethods = $match[2];
                 $updateData = $match[3];
                 
-                // Sprawdź czy są DB::raw w update
+                // Check if there are DB::raw in update
                 $hasDbRaw = strpos($updateData, 'DB::raw') !== false;
                 $dbRawSql = [];
                 if ($hasDbRaw) {
-                    // Wyciągnij zawartość DB::raw
+                    // Extract DB::raw content
                     if (preg_match_all('/DB::raw\s*\(\s*["\'](.+?)["\']\s*\)/s', $updateData, $rawMatches)) {
                         $dbRawSql = $rawMatches[1];
                     }
@@ -228,19 +228,19 @@ class MigrationAnalyzer
             $matches
         )) {
             foreach ($matches[0] as $match) {
-                // Wyciągnij nazwę modelu
+                // Extract model name
                 if (preg_match('/\\\\([A-Z][a-zA-Z]+)::create/', $match, $modelMatch)) {
                     $operations[] = [
                         'type' => 'INSERT',
                         'model' => $modelMatch[1],
                         'method' => 'Eloquent::create',
-                        'note' => 'Statyczne wywołanie Model::create()'
+                        'note' => 'Static Model::create() call'
                     ];
                 }
             }
         }
 
-        // 5. ->save() - instancje modeli
+        // 5. ->save() - model instances
         if (preg_match_all('/\$([a-zA-Z_][a-zA-Z0-9_]*)->save\s*\(\)/', $this->content, $matches)) {
             $savedVariables = array_unique($matches[1]);
             foreach ($savedVariables as $var) {
@@ -248,7 +248,7 @@ class MigrationAnalyzer
                     'type' => 'UPDATE/INSERT',
                     'variable' => '$' . $var,
                     'method' => 'Eloquent->save()',
-                    'note' => 'Zapis modelu - może być INSERT lub UPDATE'
+                    'note' => 'Model save - may be INSERT or UPDATE'
                 ];
             }
         }
@@ -268,7 +268,7 @@ class MigrationAnalyzer
                     'variable' => $variable,
                     'relation' => $relation,
                     'method' => 'Eloquent->relation()->create()',
-                    'note' => "Utworzenie rekordów przez relację {$relation}"
+                    'note' => "Record creation through {$relation} relationship"
                 ];
             }
         }
@@ -281,12 +281,12 @@ class MigrationAnalyzer
                     'type' => 'DELETE',
                     'variable' => '$' . $var,
                     'method' => 'Eloquent->delete()',
-                    'note' => 'Usunięcie modelu/kolekcji'
+                    'note' => 'Model/collection deletion'
                 ];
             }
         }
 
-        // 8. Operacje w pętlach - wykryj foreach/while z operacjami
+        // 8. Loop operations - detect foreach/while with operations
         if (preg_match_all(
             '/foreach\s*\([^)]+\)\s*\{([^}]+(?:\{[^}]+\}[^}]*)*)\}/s',
             $this->content,
@@ -295,22 +295,22 @@ class MigrationAnalyzer
             foreach ($matches[1] as $loopBody) {
                 $loopOperations = [];
                 
-                // Szukaj ->save() w pętli
+                // Look for ->save() in loop
                 if (preg_match_all('/\$([a-zA-Z_][a-zA-Z0-9_]*)->save\s*\(\)/', $loopBody, $saveMatches)) {
                     $loopOperations[] = 'save() na $' . implode(', $', array_unique($saveMatches[1]));
                 }
                 
-                // Szukaj ->create() w pętli
+                // Look for ->create() in loop
                 if (preg_match('/->create(?:Many)?\s*\(/', $loopBody)) {
                     $loopOperations[] = 'create()';
                 }
                 
-                // Szukaj ->delete() w pętli
+                // Look for ->delete() in loop
                 if (preg_match('/->delete\s*\(\)/', $loopBody)) {
                     $loopOperations[] = 'delete()';
                 }
                 
-                // Szukaj ->update() w pętli
+                // Look for ->update() in loop
                 if (preg_match('/->update\s*\(/', $loopBody)) {
                     $loopOperations[] = 'update()';
                 }
@@ -320,7 +320,7 @@ class MigrationAnalyzer
                         'type' => 'LOOP',
                         'method' => 'foreach',
                         'operations_in_loop' => $loopOperations,
-                        'note' => 'Operacje w pętli: ' . implode(', ', $loopOperations)
+                        'note' => 'Loop operations: ' . implode(', ', $loopOperations)
                     ];
                 }
             }
@@ -333,7 +333,7 @@ class MigrationAnalyzer
     {
         $conditions = [];
 
-        // where('column', 'value') lub where('column', '=', 'value')
+        // where('column', 'value') or where('column', '=', 'value')
         if (preg_match_all(
             '/->where\s*\(\s*[\'"]([^"\']+)[\'"](?:\s*,\s*[\'"]?([^"\'\),]+)[\'"]?)?(?:\s*,\s*[\'"]?([^"\'\)]+)[\'"]?)?\)/s',
             $chainedMethods,
@@ -345,7 +345,7 @@ class MigrationAnalyzer
                 $operator = isset($match[3]) ? trim($match[2]) : '=';
                 $value = isset($match[3]) ? trim($match[3]) : (isset($match[2]) ? trim($match[2]) : 'unknown');
                 
-                // Skróć długie wartości
+                // Truncate long values
                 if (strlen($value) > 50) {
                     $value = substr($value, 0, 50) . '...';
                 }
@@ -384,14 +384,14 @@ class MigrationAnalyzer
             }
         }
 
-        // whereHas - relacje
+        // whereHas - relationships
         if (preg_match_all('/->whereHas\s*\(\s*[\'"]([^"\']+)[\'"]/', $chainedMethods, $matches)) {
             foreach ($matches[1] as $relation) {
                 $conditions[] = "HAS {$relation}";
             }
         }
 
-        // whereDoesntHave - brak relacji
+        // whereDoesntHave - missing relationship
         if (preg_match_all('/->whereDoesntHave\s*\(\s*[\'"]([^"\']+)[\'"]/', $chainedMethods, $matches)) {
             foreach ($matches[1] as $relation) {
                 $conditions[] = "DOESN'T HAVE {$relation}";
@@ -425,7 +425,7 @@ class MigrationAnalyzer
     {
         $columns = [];
         
-        // Szukaj kluczy w array'u: 'column_name' => value
+        // Look for keys in array: 'column_name' => value
         if (preg_match_all('/[\'"]([a-zA-Z_][a-zA-Z0-9_]*)[\'"][\s]*=>/', $arrayContent, $matches)) {
             $columns = array_unique($matches[1]);
         }
@@ -437,7 +437,7 @@ class MigrationAnalyzer
     {
         $data = trim($data);
         
-        // Usuń nadmiarowe białe znaki
+        // Remove excessive whitespace
         $data = preg_replace('/\s+/', ' ', $data);
         
         if (strlen($data) > $maxLength) {
@@ -451,7 +451,7 @@ class MigrationAnalyzer
     {
         $sql = [];
 
-        // DB::statement - wyciągnij pełne zapytanie
+        // DB::statement - extract full query
         if (preg_match_all('/DB::statement\s*\(\s*(["\'])(.+?)\1\s*(?:,|\))/s', $this->content, $matches, PREG_SET_ORDER)) {
             foreach ($matches as $match) {
                 $statement = $match[2];
@@ -463,7 +463,7 @@ class MigrationAnalyzer
             }
         }
 
-        // DB::unprepared - często używane do długich SQL
+        // DB::unprepared - often used for long SQL
         if (preg_match_all('/DB::unprepared\s*\(\s*(["\'])(.+?)\1\s*(?:,|\))/s', $this->content, $matches, PREG_SET_ORDER)) {
             foreach ($matches as $match) {
                 $statement = $match[2];
@@ -475,7 +475,7 @@ class MigrationAnalyzer
             }
         }
 
-        // DB::raw w select/where - te są zazwyczaj fragmentami
+        // DB::raw in select/where - these are usually fragments
         if (preg_match_all('/DB::raw\s*\(\s*(["\'])(.+?)\1\s*\)/s', $this->content, $matches, PREG_SET_ORDER)) {
             foreach ($matches as $match) {
                 $statement = $match[2];
@@ -487,7 +487,7 @@ class MigrationAnalyzer
             }
         }
 
-        // Heredoc/Nowdoc SQL - często używane do długich zapytań
+        // Heredoc/Nowdoc SQL - often used for long queries
         if (preg_match_all('/<<<(["\']?)SQL\1\s*(.+?)\s*SQL/s', $this->content, $matches, PREG_SET_ORDER)) {
             foreach ($matches as $match) {
                 $statement = $match[2];
@@ -504,13 +504,13 @@ class MigrationAnalyzer
     
     protected function formatSQL(string $sql): string
     {
-        // Usuń leading/trailing whitespace
+        // Remove leading/trailing whitespace
         $sql = trim($sql);
         
-        // Zamień wielokrotne spacje na pojedyncze
+        // Replace multiple spaces with single
         $sql = preg_replace('/\s+/', ' ', $sql);
         
-        // Ogranicz długość jeśli bardzo długie (ale pokaż więcej niż wcześniej)
+        // Truncate if very long (but show more than before)
         if (strlen($sql) > 500) {
             $sql = substr($sql, 0, 500) . '... [truncated]';
         }
@@ -538,7 +538,7 @@ class MigrationAnalyzer
     {
         $dependencies = [];
 
-        // Szuka komentarzy typu "Requires: ", "Depends on: ", itp
+        // Look for comments like "Requires: ", "Depends on: ", etc.
         if (preg_match_all('/@requires?\s+([^\s\n]+)/', $this->content, $matches)) {
             foreach ($matches[1] as $dep) {
                 $dependencies['requires'][] = $dep;
@@ -551,7 +551,7 @@ class MigrationAnalyzer
             }
         }
 
-        // Szuka foreign keys - to też dependency
+        // Look for foreign keys - these are also dependencies
         if (preg_match_all('/->foreign\s*\([\'"]([^"\']+)[\'"]\)\s*->references\s*\([\'"]([^"\']+)[\'"]\)\s*->on\s*\([\'"]([^"\']+)[\'"]/', 
                            $this->content, $matches, PREG_SET_ORDER)) {
             foreach ($matches as $match) {
@@ -570,7 +570,7 @@ class MigrationAnalyzer
     {
         $columns = [];
 
-        // Wszystkie wywołania typu $table->type('name')
+        // All calls of type $table->type('name')
         $columnTypes = [
             'string', 'integer', 'bigInteger', 'text', 'boolean', 'timestamp',
             'datetime', 'date', 'decimal', 'float', 'json', 'enum', 'uuid',
@@ -685,19 +685,19 @@ class MigrationAnalyzer
     {
         $score = 0;
 
-        // Liczba tabel
+        // Number of tables
         $score += count($this->result['tables'] ?? []);
 
-        // Liczba operacji DDL
+        // Number of DDL operations
         $score += count($this->result['ddl_operations'] ?? []) * 0.5;
 
-        // Operacje DML są bardziej skomplikowane
+        // DML operations are more complex
         $score += count($this->result['dml_operations'] ?? []) * 2;
 
-        // Raw SQL jest najbardziej ryzykowny
+        // Raw SQL is the most risky
         $score += count($this->result['raw_sql'] ?? []) * 3;
 
-        // Foreign keys dodają złożoności
+        // Foreign keys add complexity
         $score += count($this->result['foreign_keys'] ?? []) * 1.5;
 
         return min(10, max(1, (int) round($score)));
@@ -733,14 +733,14 @@ class MigrationAnalyzer
             return [];
         }
 
-        // Prosta heurystyka - split po przecinkach (może nie działać dla zagnieżdżonych arrayów)
+        // Simple heuristic - split by commas (may not work for nested arrays)
         $parts = explode(',', $params);
         return array_map('trim', $parts);
     }
     
     protected function getRelativePath(string $filepath): string
     {
-        // Usuwa base_path() z początku
+        // Remove base_path() from the beginning
         $basePath = base_path();
         if (strpos($filepath, $basePath) === 0) {
             return ltrim(substr($filepath, strlen($basePath)), '/');
