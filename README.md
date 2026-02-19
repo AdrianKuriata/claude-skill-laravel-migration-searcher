@@ -239,6 +239,41 @@ Each migration in the full index contains:
   - Data: ['subscription_plan' => 'free']
 ```
 
+## Architecture
+
+The package follows SOLID principles with a clean separation of concerns:
+
+```
+src/
+├── Contracts/                          # Interfaces
+│   ├── MigrationAnalyzerInterface.php
+│   ├── IndexGeneratorInterface.php
+│   ├── FileWriterInterface.php
+│   └── ContentParserInterface.php
+├── Services/
+│   ├── MigrationAnalyzer.php           # Orchestrates parsers
+│   ├── ComplexityCalculator.php        # Pure function: calculates 1-10 score
+│   ├── IndexGenerator.php             # Orchestrates renderer + writer
+│   ├── Parsers/
+│   │   ├── FileNameParser.php         # Timestamp, name, relative path
+│   │   ├── TableDetector.php          # Schema::create/table/drop/rename, DB::table
+│   │   ├── DdlParser.php             # Columns, indexes, foreign keys, DDL ops
+│   │   ├── DmlParser.php             # INSERT/UPDATE/DELETE, Eloquent, loops
+│   │   ├── RawSqlParser.php          # DB::statement, unprepared, raw, heredoc
+│   │   └── DependencyParser.php      # @requires, @depends_on, FK dependencies
+│   ├── Renderers/
+│   │   └── MarkdownRenderer.php      # Generates markdown content and stats JSON
+│   └── Writers/
+│       └── IndexFileWriter.php       # File I/O (implements FileWriterInterface)
+├── Commands/
+│   └── IndexMigrationsCommand.php    # Constructor injection via DI
+├── Traits/
+│   └── FormatsFileSize.php
+└── MigrationSearcherServiceProvider.php  # Registers interface bindings
+```
+
+All interfaces are bound in the service provider, making it easy to swap implementations or mock in tests.
+
 ## Requirements
 
 - PHP 8.3+

@@ -2,31 +2,32 @@
 
 namespace DevSite\LaravelMigrationSearcher\Commands;
 
-use DevSite\LaravelMigrationSearcher\Services\MigrationAnalyzer;
+use DevSite\LaravelMigrationSearcher\Contracts\IndexGeneratorInterface;
+use DevSite\LaravelMigrationSearcher\Contracts\MigrationAnalyzerInterface;
 use DevSite\LaravelMigrationSearcher\Services\IndexGenerator;
+use DevSite\LaravelMigrationSearcher\Traits\FormatsFileSize;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 
 class IndexMigrationsCommand extends Command
 {
-    /**
-     * The name and signature of the console command.
-     */
-    protected $signature = 'migrations:index 
+    use FormatsFileSize;
+
+    protected $signature = 'migrations:index
                             {--type= : Type of migrations to index (as defined in config)}
                             {--refresh : Refresh existing index}
                             {--output= : Custom output path (overrides config)}';
 
-    /**
-     * The console command description.
-     */
     protected $description = 'Index all Laravel migrations and generate comprehensive documentation';
 
-    /**
-     * Migration type configurations loaded from config
-     */
     protected array $migrationTypes = [];
-    
+
+    public function __construct(
+        protected MigrationAnalyzerInterface $analyzer,
+    ) {
+        parent::__construct();
+    }
+
     public function handle()
     {
         $this->info('🔍 Starting Laravel migration indexing...');
@@ -34,47 +35,41 @@ class IndexMigrationsCommand extends Command
 
         $startTime = microtime(true);
 
-        // Load migration types from config
         $this->migrationTypes = config('migration-searcher.migration_types', [
             'default' => [
                 'path' => 'database/migrations',
             ],
         ]);
 
-        // Determine output path
-        $outputPath = $this->option('output') 
+        $outputPath = $this->option('output')
             ?: base_path(config('migration-searcher.output_path', '.claude/skills/laravel-migration-searcher'));
 
-        // If --refresh, clean existing files
         if ($this->option('refresh') && File::exists($outputPath)) {
             $this->warn('Cleaning existing index...');
             File::deleteDirectory($outputPath);
         }
 
-        // Create directory if it doesn't exist
         if (!File::exists($outputPath)) {
             File::makeDirectory($outputPath, 0755, true);
         }
 
-        // Determine which types to index
         $typesToIndex = $this->determineTypesToIndex();
 
         if ($typesToIndex === null) {
             return Command::FAILURE;
         }
 
-        // Collect all migrations
         $allMigrations = [];
         $stats = [];
 
         foreach ($typesToIndex as $type) {
             $this->info("📂 Indexing migrations: {$type}");
-            
+
             $migrations = $this->indexMigrationType($type);
             $allMigrations = array_merge($allMigrations, $migrations);
-            
+
             $stats[$type] = count($migrations);
-            
+
             $this->line("   Found: " . count($migrations) . " migrations");
         }
 
@@ -82,14 +77,12 @@ class IndexMigrationsCommand extends Command
         $this->info("📊 Total found: " . count($allMigrations) . " migrations");
         $this->newLine();
 
-        // Generate indexes
         $this->info('📝 Generating index files...');
-        
+
         $generator = new IndexGenerator($outputPath);
         $generator->setMigrations($allMigrations);
         $generated = $generator->generateAll();
 
-        // Show what was generated
         $this->newLine();
         $this->info('✅ Generated files:');
         foreach ($generated as $type => $filepath) {
@@ -97,12 +90,11 @@ class IndexMigrationsCommand extends Command
             $this->line("   - {$type}: {$filepath} ({$size})");
         }
 
-        // Copy SKILL.md if it doesn't exist
         $skillPath = $outputPath . '/SKILL.md';
         if (!File::exists($skillPath)) {
             $this->info('📋 Copying SKILL.md template...');
             $templatePath = config('migration-searcher.skill_template_path');
-            
+
             if (File::exists($templatePath)) {
                 File::copy($templatePath, $skillPath);
             } else {
@@ -110,13 +102,12 @@ class IndexMigrationsCommand extends Command
             }
         }
 
-        // Summary
         $duration = round(microtime(true) - $startTime, 2);
-        
+
         $this->newLine();
         $this->info("⏱️  Execution time: {$duration}s");
         $this->newLine();
-        
+
         $this->displaySummary($stats, $outputPath);
 
         return Command::SUCCESS;
@@ -148,7 +139,6 @@ class IndexMigrationsCommand extends Command
 
         $files = File::files($path);
         $migrations = [];
-        $analyzer = new MigrationAnalyzer();
 
         $progressBar = $this->output->createProgressBar(count($files));
         $progressBar->setFormat('   [%bar%] %current%/%max% (%percent:3s%%) %message%');
@@ -161,9 +151,9 @@ class IndexMigrationsCommand extends Command
             }
 
             $progressBar->setMessage('Analyzing: ' . $file->getFilename());
-            
+
             try {
-                $migrationData = $analyzer->analyze($file->getPathname(), $type);
+                $migrationData = $this->analyzer->analyze($file->getPathname(), $type);
                 $migrations[] = $migrationData;
             } catch (\Exception $e) {
                 $this->newLine();
@@ -203,18 +193,5 @@ class IndexMigrationsCommand extends Command
         $this->line('   2. git commit -m "Add migrations index"');
         $this->line('   3. Team does git pull and has access to index');
         $this->line('   4. Each developer can upload files to their Claude');
-    }
-    
-    protected function formatFileSize(int $bytes): string
-    {
-        $units = ['B', 'KB', 'MB', 'GB'];
-        $i = 0;
-        
-        while ($bytes >= 1024 && $i < count($units) - 1) {
-            $bytes /= 1024;
-            $i++;
-        }
-
-        return round($bytes, 2) . ' ' . $units[$i];
     }
 }

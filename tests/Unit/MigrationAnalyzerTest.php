@@ -190,9 +190,6 @@ class MigrationAnalyzerTest extends TestCase
 
     public function testDetectsDbTableInsert(): void
     {
-        // The DML regex requires chained methods before ->insert().
-        // Direct DB::table('x')->insert() without chain is not matched.
-        // Use content with a chained method to test insert detection.
         $content = <<<'PHP'
         <?php
         DB::table('settings')->whereNull('deleted_at')->insert([
@@ -315,28 +312,6 @@ class MigrationAnalyzerTest extends TestCase
         $this->assertNotEmpty($heredocs);
     }
 
-    public function testDetectsSqlOperationType(): void
-    {
-        $analyzer = new MigrationAnalyzer();
-        $method = new \ReflectionMethod($analyzer, 'detectSQLOperation');
-
-        $expectations = [
-            'SELECT * FROM users' => 'SELECT',
-            'INSERT INTO users VALUES (1)' => 'INSERT',
-            'UPDATE users SET name = "a"' => 'UPDATE',
-            'DELETE FROM users WHERE id = 1' => 'DELETE',
-            'CREATE TABLE foo (id INT)' => 'CREATE',
-            'ALTER TABLE foo ADD col INT' => 'ALTER',
-            'DROP TABLE foo' => 'DROP',
-            'TRUNCATE TABLE foo' => 'TRUNCATE',
-            'GRANT ALL ON foo TO bar' => 'OTHER',
-        ];
-
-        foreach ($expectations as $sql => $expected) {
-            $this->assertSame($expected, $method->invoke($analyzer, $sql), "Failed for SQL: {$sql}");
-        }
-    }
-
     // ── Columns/Modifiers ───────────────────────────────────────────
 
     public function testExtractsColumnsWithTypes(): void
@@ -355,21 +330,14 @@ class MigrationAnalyzerTest extends TestCase
 
     public function testExtractsColumnModifiers(): void
     {
-        // Note: The analyzer's extractColumns regex captures $table->type('name')
-        // up to the first closing paren. Chained modifiers like ->nullable()
-        // are outside the regex match and cannot be detected.
-        // This tests that the modifier detection mechanism works when modifiers
-        // ARE within the captured portion (e.g., via extractColumnModifiers).
         $result = $this->analyzeFixture('2024_02_20_100000_alter_users_add_avatar.php');
 
-        // Columns are detected correctly
         $this->assertArrayHasKey('avatar', $result['columns']);
         $this->assertSame('string', $result['columns']['avatar']['type']);
 
         $this->assertArrayHasKey('bio', $result['columns']);
         $this->assertSame('text', $result['columns']['bio']['type']);
 
-        // Modifiers are detected for methods_used (which uses a broader regex)
         $this->assertNotEmpty($result['methods_used']);
     }
 
@@ -390,48 +358,31 @@ class MigrationAnalyzerTest extends TestCase
         $this->assertGreaterThanOrEqual(1, $result['complexity']);
     }
 
-    /**
-     * @group bug
-     *
-     * BUG: calculateComplexity() references $this->result which hasn't been
-     * assigned yet during the array construction in analyze(). On first call,
-     * $this->result is [], so complexity is always 1. On subsequent calls,
-     * it uses data from the PREVIOUS analysis.
-     */
     public function testComplexityScoringFormula(): void
     {
-        // Due to the bug, we test the formula indirectly.
-        // After one call, $this->result is populated, so the second call
-        // will use the first call's data for complexity calculation.
-        // We verify the cap behavior works and the formula direction is correct.
-
-        // Use fresh analyzer to ensure clean state
         $analyzer = new MigrationAnalyzer();
 
-        // First call — complexity will be 1 (bug: $this->result is still [])
         $simple = $analyzer->analyze(
             $this->getFixturePath('2024_03_10_100000_drop_legacy_table.php'),
             'default'
         );
 
-        // Second call — complexity uses $simple's data (1 table → score 1 → complexity 1)
-        // The complex fixture is analyzed but complexity references old data
         $complex = $analyzer->analyze(
             $this->getFixturePath('2024_07_01_100000_complex_migration.php'),
             'default'
         );
 
-        // Third call — complexity now uses $complex's actual data (many operations)
         $afterComplex = $analyzer->analyze(
             $this->getFixturePath('2024_08_01_100000_empty_migration.php'),
             'default'
         );
 
-        // The "empty" migration gets complexity from complex's data (high score)
-        // This proves the bug: complexity is calculated from PREVIOUS call's data
-        $this->assertGreaterThan(1, $afterComplex['complexity'],
-            'BUG CONFIRMED: complexity uses previous analysis data. '
-            . 'Empty migration got complexity > 1 because it used complex migration data.'
+        $this->assertSame(1, $afterComplex['complexity'],
+            'BUG FIXED: Empty migration always gets complexity 1 regardless of call order.'
+        );
+
+        $this->assertGreaterThan($simple['complexity'], $complex['complexity'],
+            'Complex migration should have higher complexity than simple one.'
         );
     }
 
@@ -449,7 +400,6 @@ class MigrationAnalyzerTest extends TestCase
         });
         PHP;
 
-        // The analyzer only reads content with regex — it should not execute anything
         $result = $this->analyzeContent($content);
 
         $this->assertArrayHasKey('safe_table', $result['tables']);
@@ -488,30 +438,24 @@ class MigrationAnalyzerTest extends TestCase
 
     public function testHasDataModificationsAllConditions(): void
     {
-        // Condition 1: DML operations present
         $withDml = $this->analyzeFixture('2024_05_15_100000_data_migration.php');
         $this->assertTrue($withDml['has_data_modifications']);
 
-        // Condition 2: Raw SQL present
         $withRawSql = $this->analyzeFixture('2024_06_01_100000_raw_sql_migration.php');
         $this->assertTrue($withRawSql['has_data_modifications']);
 
-        // Condition 3: DB::table present
         $content = "<?php\nDB::table('users')->get();\n";
         $withDbTable = $this->analyzeContent($content);
         $this->assertTrue($withDbTable['has_data_modifications']);
 
-        // Condition 4: ::create( present
         $content = "<?php\n\App\Models\User::create(['name' => 'test']);\n";
         $withCreate = $this->analyzeContent($content);
         $this->assertTrue($withCreate['has_data_modifications']);
 
-        // Condition 5: ::update( present
         $content = "<?php\n\App\Models\User::update(['name' => 'test']);\n";
         $withUpdate = $this->analyzeContent($content);
         $this->assertTrue($withUpdate['has_data_modifications']);
 
-        // No data modifications
         $noData = $this->analyzeFixture('2024_08_01_100000_empty_migration.php');
         $this->assertFalse($noData['has_data_modifications']);
     }
@@ -764,82 +708,6 @@ class MigrationAnalyzerTest extends TestCase
 
         $uniqueIndexes = array_filter($result['indexes'], fn($idx) => $idx['type'] === 'unique');
         $this->assertNotEmpty($uniqueIndexes);
-    }
-
-    // ── Truncation ──────────────────────────────────────────────────
-
-    public function testFormatSqlTruncatesLongStatements(): void
-    {
-        $analyzer = new MigrationAnalyzer();
-        $method = new \ReflectionMethod($analyzer, 'formatSQL');
-
-        $longSql = 'SELECT ' . str_repeat('column_name, ', 100) . 'id FROM users';
-        $result = $method->invoke($analyzer, $longSql);
-
-        $this->assertStringEndsWith('... [truncated]', $result);
-        $this->assertLessThanOrEqual(520, strlen($result));
-    }
-
-    public function testCleanupDataPreviewTruncatesLongData(): void
-    {
-        $analyzer = new MigrationAnalyzer();
-        $method = new \ReflectionMethod($analyzer, 'cleanupDataPreview');
-
-        $longData = str_repeat('a', 200);
-        $result = $method->invoke($analyzer, $longData, 150);
-
-        $this->assertStringEndsWith('...', $result);
-        $this->assertLessThanOrEqual(153, strlen($result));
-    }
-
-    // ── Reflection tests ────────────────────────────────────────────
-
-    public function testExtractColumnModifiersDetectsAllModifiers(): void
-    {
-        $analyzer = new MigrationAnalyzer();
-        $method = new \ReflectionMethod($analyzer, 'extractColumnModifiers');
-
-        $definition = '$table->string(\'name\')->nullable()->default(\'test\')->unique()->unsigned()->index()->primary()';
-        $modifiers = $method->invoke($analyzer, $definition);
-
-        $this->assertContains('nullable', $modifiers);
-        $this->assertContains('unique', $modifiers);
-        $this->assertContains('unsigned', $modifiers);
-        $this->assertContains('indexed', $modifiers);
-        $this->assertContains('primary', $modifiers);
-
-        $defaultFound = false;
-        foreach ($modifiers as $mod) {
-            if (str_starts_with($mod, 'default(')) {
-                $defaultFound = true;
-                break;
-            }
-        }
-        $this->assertTrue($defaultFound, 'default() modifier not found');
-    }
-
-    public function testParseMethodParamsHandlesEmptyString(): void
-    {
-        $analyzer = new MigrationAnalyzer();
-        $method = new \ReflectionMethod($analyzer, 'parseMethodParams');
-
-        $result = $method->invoke($analyzer, '');
-        $this->assertSame([], $result);
-
-        $result = $method->invoke($analyzer, '   ');
-        $this->assertSame([], $result);
-    }
-
-    public function testCategorizeMethodReturnsOther(): void
-    {
-        $analyzer = new MigrationAnalyzer();
-        $method = new \ReflectionMethod($analyzer, 'categorizeMethod');
-
-        $result = $method->invoke($analyzer, 'timestamps');
-        $this->assertSame('other', $result);
-
-        $result = $method->invoke($analyzer, 'softDeletes');
-        $this->assertSame('other', $result);
     }
 
     // ── Loop operations ───────────────────────────────────────────

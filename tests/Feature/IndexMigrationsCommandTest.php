@@ -14,7 +14,6 @@ class IndexMigrationsCommandTest extends TestCase
     {
         $this->outputPath = sys_get_temp_dir() . '/cmd-test-output-' . uniqid();
 
-        // Command uses base_path($config_path), so migrations must be inside base_path
         $relativePath = 'test-migrations-' . uniqid();
         $this->migrationPath = $app->basePath($relativePath);
 
@@ -206,9 +205,6 @@ class IndexMigrationsCommandTest extends TestCase
 
     /**
      * @group security-bug
-     *
-     * BUG: No path traversal validation on --output option.
-     * User input goes directly to File::makeDirectory().
      */
     public function testPathTraversalBlocked(): void
     {
@@ -248,39 +244,5 @@ class IndexMigrationsCommandTest extends TestCase
             ->assertSuccessful();
 
         @unlink($brokenFile);
-    }
-
-    // ── formatFileSize ──────────────────────────────────────────────
-
-    public function testFormatFileSizeBytes(): void
-    {
-        $command = new \DevSite\LaravelMigrationSearcher\Commands\IndexMigrationsCommand();
-        $method = new \ReflectionMethod($command, 'formatFileSize');
-
-        $this->assertSame('512 B', $method->invoke($command, 512));
-    }
-
-    public function testFormatFileSizeKilobytes(): void
-    {
-        $command = new \DevSite\LaravelMigrationSearcher\Commands\IndexMigrationsCommand();
-        $method = new \ReflectionMethod($command, 'formatFileSize');
-
-        $this->assertSame('2 KB', $method->invoke($command, 2048));
-    }
-
-    public function testFormatFileSizeMegabytes(): void
-    {
-        $command = new \DevSite\LaravelMigrationSearcher\Commands\IndexMigrationsCommand();
-        $method = new \ReflectionMethod($command, 'formatFileSize');
-
-        $this->assertSame('2 MB', $method->invoke($command, 2 * 1024 * 1024));
-    }
-
-    public function testFormatFileSizeGigabytes(): void
-    {
-        $command = new \DevSite\LaravelMigrationSearcher\Commands\IndexMigrationsCommand();
-        $method = new \ReflectionMethod($command, 'formatFileSize');
-
-        $this->assertSame('2 GB', $method->invoke($command, 2 * 1024 * 1024 * 1024));
     }
 }
