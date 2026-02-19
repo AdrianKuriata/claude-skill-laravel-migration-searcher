@@ -1,0 +1,41 @@
+{
+    "name": "devsite/ai-claude-skill-laravel-migration-searcher",
+    "description": "Intelligent Laravel migration indexer with Claude AI integration. Automatically analyzes and indexes all migrations for instant search and debugging.",
+    "keywords": [
+        "laravel",
+        "migrations",
+        "indexer",
+        "search",
+        "claude",
+        "ai",
+        "developer-tools"
+    ],
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Adrian Kuriata",
+            "email": "adriandj83@gmail.com"
+        }
+    ],
+    "require": {
+        "php": "^8.1|^8.2|^8.3",
+        "illuminate/support": "^10.0|^11.0|^12.0",
+        "illuminate/console": "^10.0|^11.0|^12.0",
+        "illuminate/database": "^10.0|^11.0|^12.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "YourVendor\\LaravelMigrationSearcher\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "YourVendor\\LaravelMigrationSearcher\\MigrationSearcherServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

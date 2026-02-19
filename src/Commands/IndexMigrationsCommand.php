@@ -1,0 +1,231 @@
+<?php
+
+namespace YourVendor\LaravelMigrationSearcher\Commands;
+
+use YourVendor\LaravelMigrationSearcher\Services\MigrationAnalyzer;
+use YourVendor\LaravelMigrationSearcher\Services\IndexGenerator;
+use Illuminate\Console\Command;
+use Illuminate\Support\Facades\File;
+
+class IndexMigrationsCommand extends Command
+{
+    /**
+     * The name and signature of the console command.
+     */
+    protected $signature = 'migrations:index 
+                            {--type= : Type of migrations to index (as defined in config)}
+                            {--refresh : Refresh existing index}
+                            {--output= : Custom output path (overrides config)}';
+
+    /**
+     * The console command description.
+     */
+    protected $description = 'Index all Laravel migrations and generate comprehensive documentation';
+
+    /**
+     * Migration type configurations loaded from config
+     */
+    protected array $migrationTypes = [];
+
+    /**
+     * Execute the console command.
+     */
+    public function handle()
+    {
+        $this->info('🔍 Starting Laravel migration indexing...');
+        $this->newLine();
+
+        $startTime = microtime(true);
+
+        // Load migration types from config
+        $this->migrationTypes = config('migration-searcher.migration_types', [
+            'default' => [
+                'path' => 'database/migrations',
+            ],
+        ]);
+
+        // Determine output path
+        $outputPath = $this->option('output') 
+            ?: base_path(config('migration-searcher.output_path', '.claude/skills/laravel-migration-searcher'));
+
+        // If --refresh, clean existing files
+        if ($this->option('refresh') && File::exists($outputPath)) {
+            $this->warn('Cleaning existing index...');
+            File::deleteDirectory($outputPath);
+        }
+
+        // Create directory if it doesn't exist
+        if (!File::exists($outputPath)) {
+            File::makeDirectory($outputPath, 0755, true);
+        }
+
+        // Determine which types to index
+        $typesToIndex = $this->determineTypesToIndex();
+
+        // Collect all migrations
+        $allMigrations = [];
+        $stats = [];
+
+        foreach ($typesToIndex as $type) {
+            $this->info("📂 Indexing migrations: {$type}");
+            
+            $migrations = $this->indexMigrationType($type);
+            $allMigrations = array_merge($allMigrations, $migrations);
+            
+            $stats[$type] = count($migrations);
+            
+            $this->line("   Found: " . count($migrations) . " migrations");
+        }
+
+        $this->newLine();
+        $this->info("📊 Total found: " . count($allMigrations) . " migrations");
+        $this->newLine();
+
+        // Generate indexes
+        $this->info('📝 Generating index files...');
+        
+        $generator = new IndexGenerator($outputPath);
+        $generator->setMigrations($allMigrations);
+        $generated = $generator->generateAll();
+
+        // Show what was generated
+        $this->newLine();
+        $this->info('✅ Generated files:');
+        foreach ($generated as $type => $filepath) {
+            $size = File::exists($filepath) ? $this->formatFileSize(File::size($filepath)) : '0 B';
+            $this->line("   - {$type}: {$filepath} ({$size})");
+        }
+
+        // Copy SKILL.md if it doesn't exist
+        $skillPath = $outputPath . '/SKILL.md';
+        if (!File::exists($skillPath)) {
+            $this->info('📋 Copying SKILL.md template...');
+            $templatePath = config('migration-searcher.skill_template_path');
+            
+            if (File::exists($templatePath)) {
+                File::copy($templatePath, $skillPath);
+            } else {
+                $this->warn('   SKILL.md template not found - you may need to publish package resources');
+            }
+        }
+
+        // Summary
+        $duration = round(microtime(true) - $startTime, 2);
+        
+        $this->newLine();
+        $this->info("⏱️  Execution time: {$duration}s");
+        $this->newLine();
+        
+        $this->displaySummary($stats, $outputPath);
+
+        return Command::SUCCESS;
+    }
+
+    /**
+     * Determine which migration types to index
+     */
+    protected function determineTypesToIndex(): array
+    {
+        if ($type = $this->option('type')) {
+            if (!isset($this->migrationTypes[$type])) {
+                $this->error("Invalid type: {$type}");
+                $this->line("Available types: " . implode(', ', array_keys($this->migrationTypes)));
+                exit(1);
+            }
+            return [$type];
+        }
+
+        return array_keys($this->migrationTypes);
+    }
+
+    /**
+     * Index migrations of specific type
+     */
+    protected function indexMigrationType(string $type): array
+    {
+        $typeConfig = $this->migrationTypes[$type];
+        $path = base_path($typeConfig['path']);
+
+        if (!File::exists($path)) {
+            $this->warn("   Directory doesn't exist: {$path}");
+            return [];
+        }
+
+        $files = File::files($path);
+        $migrations = [];
+        $analyzer = new MigrationAnalyzer();
+
+        $progressBar = $this->output->createProgressBar(count($files));
+        $progressBar->setFormat('   [%bar%] %current%/%max% (%percent:3s%%) %message%');
+        $progressBar->setMessage('Analyzing...');
+        $progressBar->start();
+
+        foreach ($files as $file) {
+            if ($file->getExtension() !== 'php') {
+                continue;
+            }
+
+            $progressBar->setMessage('Analyzing: ' . $file->getFilename());
+            
+            try {
+                $migrationData = $analyzer->analyze($file->getPathname(), $type);
+                $migrations[] = $migrationData;
+            } catch (\Exception $e) {
+                $this->newLine();
+                $this->error("   Error analyzing {$file->getFilename()}: " . $e->getMessage());
+                $this->newLine();
+            }
+
+            $progressBar->advance();
+        }
+
+        $progressBar->finish();
+        $this->newLine();
+
+        return $migrations;
+    }
+
+    /**
+     * Display summary
+     */
+    protected function displaySummary(array $stats, string $outputPath): void
+    {
+        $this->info('📈 Summary:');
+        $this->newLine();
+
+        $this->table(
+            ['Type', 'Migrations Count'],
+            collect($stats)->map(fn($count, $type) => [$type, $count])->values()->all()
+        );
+
+        $this->newLine();
+        $this->info('💡 How to use:');
+        $this->line('   1. Index is available at: ' . $outputPath);
+        $this->line('   2. Commit .claude/ to git - whole team will have access');
+        $this->line('   3. To refresh index: php artisan migrations:index --refresh');
+        $this->line('   4. To index specific type: php artisan migrations:index --type=default');
+        $this->newLine();
+
+        $this->info('🔗 Next steps:');
+        $this->line('   1. git add .claude/');
+        $this->line('   2. git commit -m "Add migrations index"');
+        $this->line('   3. Team does git pull and has access to index');
+        $this->line('   4. Each developer can upload files to their Claude');
+    }
+
+    /**
+     * Formatuje rozmiar pliku
+     */
+    protected function formatFileSize(int $bytes): string
+    {
+        $units = ['B', 'KB', 'MB', 'GB'];
+        $i = 0;
+        
+        while ($bytes >= 1024 && $i < count($units) - 1) {
+            $bytes /= 1024;
+            $i++;
+        }
+
+        return round($bytes, 2) . ' ' . $units[$i];
+    }
+}
