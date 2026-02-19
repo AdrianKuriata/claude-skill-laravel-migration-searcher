@@ -401,4 +401,298 @@ class IndexGeneratorTest extends TestCase
         // Should still be a valid file, just with no table sections
         $this->assertStringContainsString('Grouped by Tables', $content);
     }
+
+    // ── Full sample migrations helper ───────────────────────────────
+
+    protected function fullSampleMigrations(): array
+    {
+        return array_merge($this->sampleMigrations(), [
+            [
+                'filename' => '2024_04_01_100000_system_migration.php',
+                'filepath' => '/app/database/migrations/2024_04_01_100000_system_migration.php',
+                'relative_path' => 'database/migrations/2024_04_01_100000_system_migration.php',
+                'type' => 'system',
+                'timestamp' => '2024_04_01_100000',
+                'name' => 'system_migration',
+                'tables' => [
+                    'settings' => ['operation' => 'CREATE', 'methods' => []],
+                ],
+                'ddl_operations' => [],
+                'dml_operations' => [],
+                'raw_sql' => [],
+                'dependencies' => [],
+                'columns' => ['key' => ['type' => 'string', 'modifiers' => []]],
+                'indexes' => [],
+                'foreign_keys' => [],
+                'methods_used' => [],
+                'has_data_modifications' => true,
+                'complexity' => 1,
+            ],
+            [
+                'filename' => '2024_05_01_100000_eloquent_dml.php',
+                'filepath' => '/app/database/migrations/2024_05_01_100000_eloquent_dml.php',
+                'relative_path' => 'database/migrations/2024_05_01_100000_eloquent_dml.php',
+                'type' => 'default',
+                'timestamp' => '2024_05_01_100000',
+                'name' => 'eloquent_dml',
+                'tables' => [
+                    'posts' => ['operation' => 'DATA', 'methods' => []],
+                ],
+                'ddl_operations' => [],
+                'dml_operations' => [
+                    [
+                        'type' => 'INSERT',
+                        'model' => 'Post',
+                        'method' => 'Eloquent::create',
+                        'note' => 'Static Model::create() call',
+                    ],
+                    [
+                        'type' => 'UPDATE/INSERT',
+                        'variable' => '$post',
+                        'method' => 'Eloquent->save()',
+                        'note' => 'Model save - may be INSERT or UPDATE',
+                    ],
+                    [
+                        'type' => 'INSERT',
+                        'variable' => '$user',
+                        'relation' => 'posts',
+                        'method' => 'Eloquent->relation()->create()',
+                        'note' => 'Record creation through posts relationship',
+                    ],
+                    [
+                        'type' => 'LOOP',
+                        'method' => 'foreach',
+                        'operations_in_loop' => ['save() na $item', 'delete()'],
+                        'note' => 'Loop operations: save(), delete()',
+                    ],
+                ],
+                'raw_sql' => [],
+                'dependencies' => [
+                    'requires' => ['create_posts_table'],
+                    'depends_on' => ['create_users_table'],
+                ],
+                'columns' => [],
+                'indexes' => [],
+                'foreign_keys' => [],
+                'methods_used' => [],
+                'has_data_modifications' => true,
+                'complexity' => 5,
+            ],
+            [
+                'filename' => '2024_06_01_100000_db_raw_update.php',
+                'filepath' => '/app/database/migrations/2024_06_01_100000_db_raw_update.php',
+                'relative_path' => 'database/migrations/2024_06_01_100000_db_raw_update.php',
+                'type' => 'default',
+                'timestamp' => '2024_06_01_100000',
+                'name' => 'db_raw_update',
+                'tables' => [
+                    'orders' => ['operation' => 'DATA', 'methods' => []],
+                ],
+                'ddl_operations' => [],
+                'dml_operations' => [
+                    [
+                        'type' => 'UPDATE',
+                        'table' => 'orders',
+                        'where_conditions' => ['status = pending'],
+                        'columns_updated' => ['total'],
+                        'has_db_raw' => true,
+                        'db_raw_expressions' => ['CASE WHEN discount > 0 THEN total * 0.9 ELSE total END'],
+                        'data_preview' => "['total' => DB::raw('...')]",
+                    ],
+                ],
+                'raw_sql' => [],
+                'dependencies' => [],
+                'columns' => [],
+                'indexes' => [],
+                'foreign_keys' => [],
+                'methods_used' => [],
+                'has_data_modifications' => true,
+                'complexity' => 4,
+            ],
+            [
+                'filename' => '2024_07_01_100000_data_no_raw.php',
+                'filepath' => '/app/database/migrations/2024_07_01_100000_data_no_raw.php',
+                'relative_path' => 'database/migrations/2024_07_01_100000_data_no_raw.php',
+                'type' => 'default',
+                'timestamp' => '2024_07_01_100000',
+                'name' => 'data_no_raw',
+                'tables' => [
+                    'tags' => ['operation' => 'DATA', 'methods' => []],
+                ],
+                'ddl_operations' => [],
+                'dml_operations' => [
+                    [
+                        'type' => 'UPDATE',
+                        'table' => 'tags',
+                        'where_conditions' => ['active = true'],
+                        'columns_updated' => ['name'],
+                        'has_db_raw' => false,
+                        'db_raw_expressions' => [],
+                        'data_preview' => "['name' => 'updated']",
+                    ],
+                ],
+                'raw_sql' => [],
+                'dependencies' => [],
+                'columns' => [],
+                'indexes' => [],
+                'foreign_keys' => [],
+                'methods_used' => [],
+                'has_data_modifications' => true,
+                'complexity' => 2,
+            ],
+            [
+                'filename' => '2024_08_01_100000_alter_with_columns.php',
+                'filepath' => '/app/database/migrations/2024_08_01_100000_alter_with_columns.php',
+                'relative_path' => 'database/migrations/2024_08_01_100000_alter_with_columns.php',
+                'type' => 'default',
+                'timestamp' => '2024_08_01_100000',
+                'name' => 'alter_with_columns',
+                'tables' => [
+                    'profiles' => ['operation' => 'ALTER', 'methods' => []],
+                ],
+                'ddl_operations' => [
+                    ['method' => 'string', 'params' => ["'bio'"], 'category' => 'column_create'],
+                ],
+                'dml_operations' => [],
+                'raw_sql' => [],
+                'dependencies' => [],
+                'columns' => ['bio' => ['type' => 'string', 'modifiers' => ['nullable']]],
+                'indexes' => [],
+                'foreign_keys' => [],
+                'methods_used' => ['string'],
+                'has_data_modifications' => false,
+                'complexity' => 2,
+            ],
+        ]);
+    }
+
+    // ── By-type index ───────────────────────────────────────────────
+
+    public function testByTypeIndexContainsSystemType(): void
+    {
+        $this->generator->setMigrations($this->fullSampleMigrations());
+        $this->generator->generateAll();
+
+        $content = file_get_contents($this->outputPath . '/index-by-type.md');
+
+        $this->assertStringContainsString('system_migration.php', $content);
+    }
+
+    public function testByTypeIndexShowsNoMigrationsForEmptyType(): void
+    {
+        $this->generator->setMigrations($this->sampleMigrations());
+        $this->generator->generateAll();
+
+        $content = file_get_contents($this->outputPath . '/index-by-type.md');
+
+        $this->assertStringContainsString('*No migrations of this type*', $content);
+    }
+
+    // ── Full index — DML branches ───────────────────────────────────
+
+    public function testFullIndexContainsEloquentModelDml(): void
+    {
+        $this->generator->setMigrations($this->fullSampleMigrations());
+        $this->generator->generateAll();
+
+        $content = file_get_contents($this->outputPath . '/index-full.md');
+
+        $this->assertStringContainsString('Post::Eloquent::create', $content);
+    }
+
+    public function testFullIndexContainsVariableDml(): void
+    {
+        $this->generator->setMigrations($this->fullSampleMigrations());
+        $this->generator->generateAll();
+
+        $content = file_get_contents($this->outputPath . '/index-full.md');
+
+        $this->assertStringContainsString('$post->Eloquent->save()', $content);
+    }
+
+    public function testFullIndexContainsVariableDmlWithRelation(): void
+    {
+        $this->generator->setMigrations($this->fullSampleMigrations());
+        $this->generator->generateAll();
+
+        $content = file_get_contents($this->outputPath . '/index-full.md');
+
+        $this->assertStringContainsString('relation: posts', $content);
+    }
+
+    public function testFullIndexContainsLoopDml(): void
+    {
+        $this->generator->setMigrations($this->fullSampleMigrations());
+        $this->generator->generateAll();
+
+        $content = file_get_contents($this->outputPath . '/index-full.md');
+
+        $this->assertStringContainsString('LOOP', $content);
+        $this->assertStringContainsString('foreach', $content);
+    }
+
+    public function testFullIndexContainsDbRawExpressions(): void
+    {
+        $this->generator->setMigrations($this->fullSampleMigrations());
+        $this->generator->generateAll();
+
+        $content = file_get_contents($this->outputPath . '/index-full.md');
+
+        $this->assertStringContainsString('Uses DB::raw', $content);
+        $this->assertStringContainsString('CASE WHEN', $content);
+    }
+
+    public function testFullIndexContainsDataPreviewWithoutDbRaw(): void
+    {
+        $this->generator->setMigrations($this->fullSampleMigrations());
+        $this->generator->generateAll();
+
+        $content = file_get_contents($this->outputPath . '/index-full.md');
+
+        $this->assertStringContainsString("Data: ['name' => 'updated']", $content);
+    }
+
+    public function testFullIndexContainsNestedDependencies(): void
+    {
+        $this->generator->setMigrations($this->fullSampleMigrations());
+        $this->generator->generateAll();
+
+        $content = file_get_contents($this->outputPath . '/index-full.md');
+
+        $this->assertStringContainsString('Dependencies', $content);
+        $this->assertStringContainsString('requires', $content);
+    }
+
+    // ── By-operation index ──────────────────────────────────────────
+
+    public function testByOperationAlterWithColumns(): void
+    {
+        $this->generator->setMigrations($this->fullSampleMigrations());
+        $this->generator->generateAll();
+
+        $content = file_get_contents($this->outputPath . '/index-by-operation.md');
+
+        $this->assertStringContainsString('Affected columns', $content);
+        $this->assertStringContainsString('bio', $content);
+    }
+
+    public function testByOperationDataWithWhereConditions(): void
+    {
+        $this->generator->setMigrations($this->fullSampleMigrations());
+        $this->generator->generateAll();
+
+        $content = file_get_contents($this->outputPath . '/index-by-operation.md');
+
+        $this->assertStringContainsString('WHERE:', $content);
+    }
+
+    public function testFormatMigrationCompactModifiesDataWarning(): void
+    {
+        $this->generator->setMigrations($this->fullSampleMigrations());
+        $this->generator->generateAll();
+
+        $content = file_get_contents($this->outputPath . '/index-by-type.md');
+
+        $this->assertStringContainsString('Modifies data', $content);
+    }
 }

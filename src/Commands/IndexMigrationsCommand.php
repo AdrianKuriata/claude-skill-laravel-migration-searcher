@@ -59,6 +59,10 @@ class IndexMigrationsCommand extends Command
         // Determine which types to index
         $typesToIndex = $this->determineTypesToIndex();
 
+        if ($typesToIndex === null) {
+            return Command::FAILURE;
+        }
+
         // Collect all migrations
         $allMigrations = [];
         $stats = [];
@@ -118,13 +122,13 @@ class IndexMigrationsCommand extends Command
         return Command::SUCCESS;
     }
 
-    protected function determineTypesToIndex(): array
+    protected function determineTypesToIndex(): ?array
     {
         if ($type = $this->option('type')) {
             if (!isset($this->migrationTypes[$type])) {
                 $this->error("Invalid type: {$type}");
                 $this->line("Available types: " . implode(', ', array_keys($this->migrationTypes)));
-                exit(1);
+                return null;
             }
             return [$type];
         }

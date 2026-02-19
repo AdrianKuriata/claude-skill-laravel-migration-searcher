@@ -11,3 +11,16 @@ services:
         composer install --no-interaction 2>&1 &&
         vendor/bin/phpunit --colors=always 2>&1
       "
+
+  coverage:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    working_dir: /app
+    volumes:
+      - .:/app
+    command: >
+      bash -c "
+        composer install --no-interaction 2>&1 &&
+        php -d pcov.enabled=1 vendor/bin/phpunit --colors=always --coverage-html coverage --coverage-text 2>&1
+      "

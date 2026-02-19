@@ -9,3 +9,4 @@ Thumbs.db
 .claude/
 CLAUDE.md
 .phpunit.cache/
+coverage/

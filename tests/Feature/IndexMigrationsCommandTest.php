@@ -82,18 +82,14 @@ class IndexMigrationsCommandTest extends TestCase
         $this->assertFileExists($this->outputPath . '/stats.json');
     }
 
-    /**
-     * @group bug
-     *
-     * BUG: determineTypesToIndex() uses exit(1) which kills PHPUnit.
-     * This test must be skipped until refactored to return Command::FAILURE.
-     */
     public function testInvalidTypeShowsError(): void
     {
-        $this->markTestSkipped(
-            'BUG: exit(1) in determineTypesToIndex() kills PHPUnit process. '
-            . 'Needs refactor to return Command::FAILURE from handle().'
-        );
+        $this->artisan('migrations:index', [
+            '--output' => $this->outputPath,
+            '--type' => 'nonexistent_type',
+        ])
+            ->expectsOutputToContain('Invalid type')
+            ->assertFailed();
     }
 
     public function testRefreshDeletesAndRecreates(): void
@@ -220,5 +216,71 @@ class IndexMigrationsCommandTest extends TestCase
             'SECURITY BUG: No path traversal validation on --output option. '
             . 'Needs validation before File::makeDirectory() call.'
         );
+    }
+
+    // ── Config default path ───────────────────────────────────────
+
+    public function testUsesConfigOutputPathWhenNoOutputOption(): void
+    {
+        $configPath = 'test-index-output-' . uniqid();
+        $this->app['config']->set('migration-searcher.output_path', $configPath);
+
+        $expectedPath = base_path($configPath);
+
+        $this->artisan('migrations:index')
+            ->assertSuccessful();
+
+        $this->assertDirectoryExists($expectedPath);
+        $this->assertFileExists($expectedPath . '/index-full.md');
+
+        File::deleteDirectory($expectedPath);
+    }
+
+    // ── Exception handling ──────────────────────────────────────────
+
+    public function testExceptionDuringAnalysisShowsError(): void
+    {
+        $brokenFile = $this->migrationPath . '/2099_01_01_000000_broken.php';
+        symlink('/nonexistent/path/file.php', $brokenFile);
+
+        $this->artisan('migrations:index', ['--output' => $this->outputPath])
+            ->expectsOutputToContain('Error analyzing')
+            ->assertSuccessful();
+
+        @unlink($brokenFile);
+    }
+
+    // ── formatFileSize ──────────────────────────────────────────────
+
+    public function testFormatFileSizeBytes(): void
+    {
+        $command = new \DevSite\LaravelMigrationSearcher\Commands\IndexMigrationsCommand();
+        $method = new \ReflectionMethod($command, 'formatFileSize');
+
+        $this->assertSame('512 B', $method->invoke($command, 512));
+    }
+
+    public function testFormatFileSizeKilobytes(): void
+    {
+        $command = new \DevSite\LaravelMigrationSearcher\Commands\IndexMigrationsCommand();
+        $method = new \ReflectionMethod($command, 'formatFileSize');
+
+        $this->assertSame('2 KB', $method->invoke($command, 2048));
+    }
+
+    public function testFormatFileSizeMegabytes(): void
+    {
+        $command = new \DevSite\LaravelMigrationSearcher\Commands\IndexMigrationsCommand();
+        $method = new \ReflectionMethod($command, 'formatFileSize');
+
+        $this->assertSame('2 MB', $method->invoke($command, 2 * 1024 * 1024));
+    }
+
+    public function testFormatFileSizeGigabytes(): void
+    {
+        $command = new \DevSite\LaravelMigrationSearcher\Commands\IndexMigrationsCommand();
+        $method = new \ReflectionMethod($command, 'formatFileSize');
+
+        $this->assertSame('2 GB', $method->invoke($command, 2 * 1024 * 1024 * 1024));
     }
 }

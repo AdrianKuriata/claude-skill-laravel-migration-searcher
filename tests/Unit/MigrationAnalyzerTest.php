@@ -555,4 +555,321 @@ class MigrationAnalyzerTest extends TestCase
 
         $this->assertSame('custom_type', $result['type']);
     }
+
+    // ── extractWhereConditions ──────────────────────────────────────
+
+    public function testExtractsWhereInCondition(): void
+    {
+        $content = <<<'PHP'
+        <?php
+        DB::table('users')->whereIn('status', ['active', 'pending'])->update(['verified' => true]);
+        PHP;
+
+        $result = $this->analyzeContent($content);
+
+        $updates = array_filter($result['dml_operations'], fn($op) => $op['type'] === 'UPDATE');
+        $update = array_values($updates)[0];
+        $this->assertContains('status IN (...)', $update['where_conditions']);
+    }
+
+    public function testExtractsWhereNotInCondition(): void
+    {
+        $content = <<<'PHP'
+        <?php
+        DB::table('users')->whereNotIn('role', ['admin', 'super'])->update(['active' => false]);
+        PHP;
+
+        $result = $this->analyzeContent($content);
+
+        $updates = array_filter($result['dml_operations'], fn($op) => $op['type'] === 'UPDATE');
+        $update = array_values($updates)[0];
+        $this->assertContains('role NOT IN (...)', $update['where_conditions']);
+    }
+
+    public function testExtractsWhereNullCondition(): void
+    {
+        $content = <<<'PHP'
+        <?php
+        DB::table('users')->whereNull('deleted_at')->update(['active' => true]);
+        PHP;
+
+        $result = $this->analyzeContent($content);
+
+        $updates = array_filter($result['dml_operations'], fn($op) => $op['type'] === 'UPDATE');
+        $update = array_values($updates)[0];
+        $this->assertContains('deleted_at IS NULL', $update['where_conditions']);
+    }
+
+    public function testExtractsWhereNotNullCondition(): void
+    {
+        $content = <<<'PHP'
+        <?php
+        DB::table('users')->whereNotNull('email_verified_at')->update(['verified' => true]);
+        PHP;
+
+        $result = $this->analyzeContent($content);
+
+        $updates = array_filter($result['dml_operations'], fn($op) => $op['type'] === 'UPDATE');
+        $update = array_values($updates)[0];
+        $this->assertContains('email_verified_at IS NOT NULL', $update['where_conditions']);
+    }
+
+    public function testExtractsWhereBetweenCondition(): void
+    {
+        $content = <<<'PHP'
+        <?php
+        DB::table('orders')->whereBetween('created_at', ['2024-01-01', '2024-12-31'])->update(['archived' => true]);
+        PHP;
+
+        $result = $this->analyzeContent($content);
+
+        $updates = array_filter($result['dml_operations'], fn($op) => $op['type'] === 'UPDATE');
+        $update = array_values($updates)[0];
+        $this->assertContains('created_at BETWEEN (...)', $update['where_conditions']);
+    }
+
+    public function testExtractsWhereHasCondition(): void
+    {
+        $content = <<<'PHP'
+        <?php
+        DB::table('users')->whereHas('posts')->update(['has_posts' => true]);
+        PHP;
+
+        $result = $this->analyzeContent($content);
+
+        $updates = array_filter($result['dml_operations'], fn($op) => $op['type'] === 'UPDATE');
+        $update = array_values($updates)[0];
+        $this->assertContains('HAS posts', $update['where_conditions']);
+    }
+
+    public function testExtractsWhereDoesntHaveCondition(): void
+    {
+        $content = <<<'PHP'
+        <?php
+        DB::table('users')->whereDoesntHave('orders')->update(['inactive' => true]);
+        PHP;
+
+        $result = $this->analyzeContent($content);
+
+        $updates = array_filter($result['dml_operations'], fn($op) => $op['type'] === 'UPDATE');
+        $update = array_values($updates)[0];
+        $this->assertContains("DOESN'T HAVE orders", $update['where_conditions']);
+    }
+
+    public function testExtractsOrWhereCondition(): void
+    {
+        $content = <<<'PHP'
+        <?php
+        DB::table('users')->where('active', false)->orWhere('banned', true)->update(['status' => 'blocked']);
+        PHP;
+
+        $result = $this->analyzeContent($content);
+
+        $updates = array_filter($result['dml_operations'], fn($op) => $op['type'] === 'UPDATE');
+        $update = array_values($updates)[0];
+        $this->assertContains('OR banned = true', $update['where_conditions']);
+    }
+
+    public function testExtractsOrWhereWithOperator(): void
+    {
+        $content = <<<'PHP'
+        <?php
+        DB::table('users')->where('age', '>', 18)->orWhere('age', '<', 5)->update(['flagged' => true]);
+        PHP;
+
+        $result = $this->analyzeContent($content);
+
+        $updates = array_filter($result['dml_operations'], fn($op) => $op['type'] === 'UPDATE');
+        $update = array_values($updates)[0];
+        $this->assertContains('OR age < 5', $update['where_conditions']);
+    }
+
+    public function testTruncatesLongOrWhereValues(): void
+    {
+        $longValue = str_repeat('y', 60);
+        $content = "<?php\nDB::table('users')->where('name', 'x')->orWhere('email', '{$longValue}')->update(['flag' => true]);\n";
+
+        $result = $this->analyzeContent($content);
+
+        $updates = array_filter($result['dml_operations'], fn($op) => $op['type'] === 'UPDATE');
+        $update = array_values($updates)[0];
+        $orConditions = array_filter($update['where_conditions'], fn($c) => str_starts_with($c, 'OR '));
+        $orCondition = array_values($orConditions)[0];
+        $this->assertStringContainsString('...', $orCondition);
+    }
+
+    public function testTruncatesLongWhereValues(): void
+    {
+        $longValue = str_repeat('x', 60);
+        $content = <<<PHP
+        <?php
+        DB::table('users')->where('name', '{$longValue}')->update(['flag' => true]);
+        PHP;
+
+        $result = $this->analyzeContent($content);
+
+        $updates = array_filter($result['dml_operations'], fn($op) => $op['type'] === 'UPDATE');
+        $update = array_values($updates)[0];
+        $condition = $update['where_conditions'][0];
+        $this->assertStringContainsString('...', $condition);
+        $this->assertLessThanOrEqual(70, strlen($condition));
+    }
+
+    // ── extractDependencies ─────────────────────────────────────────
+
+    public function testExtractsRequiresAnnotation(): void
+    {
+        $content = <<<'PHP'
+        <?php
+        // @requires create_users_table
+        Schema::table('profiles', function ($table) {
+            $table->foreignId('user_id');
+        });
+        PHP;
+
+        $result = $this->analyzeContent($content);
+
+        $this->assertArrayHasKey('requires', $result['dependencies']);
+        $this->assertContains('create_users_table', $result['dependencies']['requires']);
+    }
+
+    public function testExtractsDependsOnAnnotation(): void
+    {
+        $content = <<<'PHP'
+        <?php
+        // @depends on create_roles_table
+        Schema::table('users', function ($table) {
+            $table->foreignId('role_id');
+        });
+        PHP;
+
+        $result = $this->analyzeContent($content);
+
+        $this->assertArrayHasKey('depends_on', $result['dependencies']);
+        $this->assertContains('create_roles_table', $result['dependencies']['depends_on']);
+    }
+
+    // ── extractIndexes ──────────────────────────────────────────────
+
+    public function testExtractsStandaloneUniqueIndex(): void
+    {
+        $content = <<<'PHP'
+        <?php
+        Schema::table('users', function ($table) {
+            $table->unique(['email', 'tenant_id']);
+        });
+        PHP;
+
+        $result = $this->analyzeContent($content);
+
+        $uniqueIndexes = array_filter($result['indexes'], fn($idx) => $idx['type'] === 'unique');
+        $this->assertNotEmpty($uniqueIndexes);
+    }
+
+    // ── Truncation ──────────────────────────────────────────────────
+
+    public function testFormatSqlTruncatesLongStatements(): void
+    {
+        $analyzer = new MigrationAnalyzer();
+        $method = new \ReflectionMethod($analyzer, 'formatSQL');
+
+        $longSql = 'SELECT ' . str_repeat('column_name, ', 100) . 'id FROM users';
+        $result = $method->invoke($analyzer, $longSql);
+
+        $this->assertStringEndsWith('... [truncated]', $result);
+        $this->assertLessThanOrEqual(520, strlen($result));
+    }
+
+    public function testCleanupDataPreviewTruncatesLongData(): void
+    {
+        $analyzer = new MigrationAnalyzer();
+        $method = new \ReflectionMethod($analyzer, 'cleanupDataPreview');
+
+        $longData = str_repeat('a', 200);
+        $result = $method->invoke($analyzer, $longData, 150);
+
+        $this->assertStringEndsWith('...', $result);
+        $this->assertLessThanOrEqual(153, strlen($result));
+    }
+
+    // ── Reflection tests ────────────────────────────────────────────
+
+    public function testExtractColumnModifiersDetectsAllModifiers(): void
+    {
+        $analyzer = new MigrationAnalyzer();
+        $method = new \ReflectionMethod($analyzer, 'extractColumnModifiers');
+
+        $definition = '$table->string(\'name\')->nullable()->default(\'test\')->unique()->unsigned()->index()->primary()';
+        $modifiers = $method->invoke($analyzer, $definition);
+
+        $this->assertContains('nullable', $modifiers);
+        $this->assertContains('unique', $modifiers);
+        $this->assertContains('unsigned', $modifiers);
+        $this->assertContains('indexed', $modifiers);
+        $this->assertContains('primary', $modifiers);
+
+        $defaultFound = false;
+        foreach ($modifiers as $mod) {
+            if (str_starts_with($mod, 'default(')) {
+                $defaultFound = true;
+                break;
+            }
+        }
+        $this->assertTrue($defaultFound, 'default() modifier not found');
+    }
+
+    public function testParseMethodParamsHandlesEmptyString(): void
+    {
+        $analyzer = new MigrationAnalyzer();
+        $method = new \ReflectionMethod($analyzer, 'parseMethodParams');
+
+        $result = $method->invoke($analyzer, '');
+        $this->assertSame([], $result);
+
+        $result = $method->invoke($analyzer, '   ');
+        $this->assertSame([], $result);
+    }
+
+    public function testCategorizeMethodReturnsOther(): void
+    {
+        $analyzer = new MigrationAnalyzer();
+        $method = new \ReflectionMethod($analyzer, 'categorizeMethod');
+
+        $result = $method->invoke($analyzer, 'timestamps');
+        $this->assertSame('other', $result);
+
+        $result = $method->invoke($analyzer, 'softDeletes');
+        $this->assertSame('other', $result);
+    }
+
+    // ── Loop operations ───────────────────────────────────────────
+
+    public function testDetectsCreateAndUpdateInLoop(): void
+    {
+        $content = <<<'PHP'
+        <?php
+        foreach ($items as $item) {
+            $item->update(['status' => 'done']);
+            $item->children()->create(['name' => 'child']);
+        }
+        PHP;
+
+        $result = $this->analyzeContent($content);
+
+        $loops = array_filter($result['dml_operations'], fn($op) => $op['type'] === 'LOOP');
+        $this->assertNotEmpty($loops);
+
+        $loop = array_values($loops)[0];
+        $this->assertContains('create()', $loop['operations_in_loop']);
+        $this->assertContains('update()', $loop['operations_in_loop']);
+    }
+
+    // ── hasDataModifications ────────────────────────────────────────
+
+    public function testHasDataModificationsInsertCondition(): void
+    {
+        $content = "<?php\n\App\Models\User::insert(['name' => 'test']);\n";
+        $result = $this->analyzeContent($content);
+        $this->assertTrue($result['has_data_modifications']);
+    }
 }

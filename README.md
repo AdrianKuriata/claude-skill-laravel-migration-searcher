@@ -250,6 +250,16 @@ Each migration in the full index contains:
 docker compose -f docker-compose.test.yml up --build --abort-on-container-exit --remove-orphans && docker compose -f docker-compose.test.yml down
 ```
 
+### Code Coverage
+
+Generate an HTML coverage report (requires PCOV, included in the Docker image):
+
+```bash
+docker compose -f docker-compose.test.yml run --rm coverage
+```
+
+The report will be available in the `./coverage/` directory. Open `coverage/index.html` in a browser to inspect line-by-line coverage.
+
 ## License
 
 MIT License. See [LICENSE](LICENSE) for details.
