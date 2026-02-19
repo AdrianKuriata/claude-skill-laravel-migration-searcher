@@ -1,0 +1,1 @@
+This is not a migration file and should be skipped by the indexer.
