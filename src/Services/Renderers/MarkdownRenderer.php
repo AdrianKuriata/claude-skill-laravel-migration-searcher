@@ -2,23 +2,23 @@
 
 namespace DevSite\LaravelMigrationSearcher\Services\Renderers;
 
-class MarkdownRenderer
+use DevSite\LaravelMigrationSearcher\Contracts\RendererInterface;
+
+class MarkdownRenderer implements RendererInterface
 {
-    public function escapeHtml(string $value): string
+    public function getFileExtension(): string
     {
-        return str_replace(['&', '<'], ['&amp;', '&lt;'], $value);
+        return 'md';
     }
 
-    public function renderFullIndex(array $migrations): string
+    public function renderFullIndex(array $data): string
     {
-        $content = "# Full Laravel Migrations Index\n\n";
-        $content .= "**Generated:** " . now()->format('Y-m-d H:i:s') . "\n";
-        $content .= "**Number of migrations:** " . count($migrations) . "\n\n";
+        $content = "# {$data['title']}\n\n";
+        $content .= "**Generated:** {$data['generated_at']}\n";
+        $content .= "**Number of migrations:** {$data['total_migrations']}\n\n";
         $content .= "---\n\n";
 
-        $sorted = collect($migrations)->sortBy('timestamp')->values()->all();
-
-        foreach ($sorted as $migration) {
+        foreach ($data['migrations'] as $migration) {
             $content .= $this->formatMigrationFull($migration);
             $content .= "\n---\n\n";
         }
@@ -26,21 +26,23 @@ class MarkdownRenderer
         return $content;
     }
 
-    public function renderByTypeIndex(array $migrations): string
+    public function renderByTypeIndex(array $data): string
     {
-        $content = "# Migrations Index - Grouped by Type\n\n";
-        $content .= "**Generated:** " . now()->format('Y-m-d H:i:s') . "\n\n";
+        $content = "# {$data['title']}\n\n";
+        $content .= "**Generated:** {$data['generated_at']}\n\n";
 
-        $grouped = collect($migrations)->groupBy('type')->sortKeys();
+        if (empty($data['groups'])) {
+            $content .= "*No migrations found*\n\n";
+            return $content;
+        }
 
-        foreach ($grouped as $type => $typeMigrations) {
-            $sorted = $typeMigrations->sortBy('timestamp')->values()->all();
+        foreach ($data['groups'] as $type => $group) {
             $safeType = $this->escapeHtml($type);
 
             $content .= "## {$safeType}\n\n";
-            $content .= "**Count:** " . count($sorted) . "\n\n";
+            $content .= "**Count:** {$group['count']}\n\n";
 
-            foreach ($sorted as $migration) {
+            foreach ($group['migrations'] as $migration) {
                 $content .= $this->formatMigrationCompact($migration);
                 $content .= "\n";
             }
@@ -48,36 +50,20 @@ class MarkdownRenderer
             $content .= "\n---\n\n";
         }
 
-        if ($grouped->isEmpty()) {
-            $content .= "*No migrations found*\n\n";
-        }
-
         return $content;
     }
 
-    public function renderByTableIndex(array $migrations): string
+    public function renderByTableIndex(array $data): string
     {
-        $content = "# Migrations Index - Grouped by Tables\n\n";
-        $content .= "**Generated:** " . now()->format('Y-m-d H:i:s') . "\n\n";
+        $content = "# {$data['title']}\n\n";
+        $content .= "**Generated:** {$data['generated_at']}\n\n";
 
-        $tablesMigrations = [];
-        foreach ($migrations as $migration) {
-            foreach ($migration['tables'] as $table => $tableInfo) {
-                if (!isset($tablesMigrations[$table])) {
-                    $tablesMigrations[$table] = [];
-                }
-                $tablesMigrations[$table][] = array_merge($migration, ['table_operation' => $tableInfo['operation']]);
-            }
-        }
-
-        ksort($tablesMigrations);
-
-        foreach ($tablesMigrations as $table => $tableMigrations) {
+        foreach ($data['tables'] as $table => $tableData) {
             $safeTable = $this->escapeHtml($table);
             $content .= "## Table: `{$safeTable}`\n\n";
-            $content .= "**Number of migrations:** " . count($tableMigrations) . "\n\n";
+            $content .= "**Number of migrations:** {$tableData['count']}\n\n";
 
-            foreach ($tableMigrations as $migration) {
+            foreach ($tableData['migrations'] as $migration) {
                 $safeFilename = $this->escapeHtml($migration['filename']);
                 $safeOp = $this->escapeHtml($migration['table_operation']);
                 $safeType = $this->escapeHtml($migration['type']);
@@ -112,38 +98,17 @@ class MarkdownRenderer
         return $content;
     }
 
-    public function renderByOperationIndex(array $migrations): string
+    public function renderByOperationIndex(array $data): string
     {
-        $content = "# Migrations Index - Grouped by Operations\n\n";
-        $content .= "**Generated:** " . now()->format('Y-m-d H:i:s') . "\n\n";
+        $content = "# {$data['title']}\n\n";
+        $content .= "**Generated:** {$data['generated_at']}\n\n";
 
-        $operations = [
-            'CREATE' => 'Table Creation',
-            'ALTER' => 'Structure Modifications',
-            'DROP' => 'Table Deletion',
-            'DATA' => 'Data Modifications',
-            'RENAME' => 'Renaming',
-        ];
+        foreach ($data['operations'] as $op => $opData) {
+            $content .= "## {$opData['description']} ({$op})\n\n";
+            $content .= "**Number of operations:** {$opData['count']}\n\n";
 
-        foreach ($operations as $op => $description) {
-            $opMigrations = [];
-
-            foreach ($migrations as $migration) {
-                foreach ($migration['tables'] as $table => $tableInfo) {
-                    if ($tableInfo['operation'] === $op) {
-                        $opMigrations[] = array_merge($migration, [
-                            'target_table' => $table,
-                            'operation' => $op,
-                        ]);
-                    }
-                }
-            }
-
-            $content .= "## {$description} ({$op})\n\n";
-            $content .= "**Number of operations:** " . count($opMigrations) . "\n\n";
-
-            if (count($opMigrations) > 0) {
-                foreach ($opMigrations as $migration) {
+            if ($opData['count'] > 0) {
+                foreach ($opData['migrations'] as $migration) {
                     $safeFilename = $this->escapeHtml($migration['filename']);
                     $safeTargetTable = $this->escapeHtml($migration['target_table']);
                     $safeType = $this->escapeHtml($migration['type']);
@@ -185,15 +150,11 @@ class MarkdownRenderer
             $content .= "---\n\n";
         }
 
-        $rawSqlMigrations = collect($migrations)
-            ->filter(fn($m) => !empty($m['raw_sql']))
-            ->values()
-            ->all();
-
+        $rawSql = $data['raw_sql'];
         $content .= "## Raw SQL\n\n";
-        $content .= "**Number of migrations with raw SQL:** " . count($rawSqlMigrations) . "\n\n";
+        $content .= "**Number of migrations with raw SQL:** {$rawSql['count']}\n\n";
 
-        foreach ($rawSqlMigrations as $migration) {
+        foreach ($rawSql['migrations'] as $migration) {
             $safeFilename = $this->escapeHtml($migration['filename']);
             $safeType = $this->escapeHtml($migration['type']);
             $safePath = $this->escapeHtml($migration['relative_path']);
@@ -215,23 +176,14 @@ class MarkdownRenderer
         return $content;
     }
 
-    public function renderStats(array $migrations): string
+    public function renderStats(array $data): string
     {
-        $stats = [
-            'generated_at' => now()->toIso8601String(),
-            'total_migrations' => count($migrations),
-            'by_type' => collect($migrations)->groupBy('type')->map->count()->sortKeys()->all(),
-            'tables' => $this->getTableStats($migrations),
-            'complexity' => [
-                'average' => round(collect($migrations)->avg('complexity'), 2),
-                'max' => collect($migrations)->max('complexity'),
-                'high_complexity' => collect($migrations)->where('complexity', '>=', 7)->count(),
-            ],
-            'data_modifications' => collect($migrations)->where('has_data_modifications', true)->count(),
-            'raw_sql_count' => collect($migrations)->filter(fn($m) => !empty($m['raw_sql']))->count(),
-        ];
+        return json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+    }
 
-        return json_encode($stats, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+    public function escapeHtml(string $value): string
+    {
+        return str_replace(['&', '<'], ['&amp;', '&lt;'], $value);
     }
 
     public function formatMigrationFull(array $migration): string
@@ -428,28 +380,5 @@ class MarkdownRenderer
         }
 
         return implode(', ', $parts);
-    }
-
-    protected function getTableStats(array $migrations): array
-    {
-        $tables = [];
-
-        foreach ($migrations as $migration) {
-            foreach ($migration['tables'] as $table => $tableInfo) {
-                if (!isset($tables[$table])) {
-                    $tables[$table] = [
-                        'migrations_count' => 0,
-                        'operations' => [],
-                    ];
-                }
-                $tables[$table]['migrations_count']++;
-                $op = $tableInfo['operation'];
-                $tables[$table]['operations'][$op] = ($tables[$table]['operations'][$op] ?? 0) + 1;
-            }
-        }
-
-        uasort($tables, fn($a, $b) => $b['migrations_count'] <=> $a['migrations_count']);
-
-        return array_slice($tables, 0, 50);
     }
 }

@@ -2,9 +2,12 @@
 
 namespace DevSite\LaravelMigrationSearcher\Commands;
 
-use DevSite\LaravelMigrationSearcher\Contracts\IndexGeneratorInterface;
+use DevSite\LaravelMigrationSearcher\Contracts\IndexDataBuilderInterface;
 use DevSite\LaravelMigrationSearcher\Contracts\MigrationAnalyzerInterface;
+use DevSite\LaravelMigrationSearcher\Contracts\RendererInterface;
 use DevSite\LaravelMigrationSearcher\Services\IndexGenerator;
+use DevSite\LaravelMigrationSearcher\Services\Renderers\JsonRenderer;
+use DevSite\LaravelMigrationSearcher\Services\Renderers\MarkdownRenderer;
 use DevSite\LaravelMigrationSearcher\Traits\FormatsFileSize;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
@@ -15,6 +18,7 @@ class IndexMigrationsCommand extends Command
 
     protected $signature = 'migrations:index
                             {--type= : Type of migrations to index (as defined in config)}
+                            {--format= : Output format (markdown, json)}
                             {--refresh : Refresh existing index}
                             {--output= : Custom output path (overrides config)}';
 
@@ -46,6 +50,16 @@ class IndexMigrationsCommand extends Command
 
         if (!$this->isPathWithinBase($outputPath)) {
             $this->error('Output path must be within the project root directory.');
+            return Command::FAILURE;
+        }
+
+        $format = $this->option('format')
+            ?: config('migration-searcher.default_format', 'markdown');
+
+        $renderer = $this->resolveRenderer($format);
+
+        if ($renderer === null) {
+            $this->error("Unsupported format: {$format}. Available formats: markdown, json");
             return Command::FAILURE;
         }
 
@@ -84,7 +98,8 @@ class IndexMigrationsCommand extends Command
 
         $this->info('📝 Generating index files...');
 
-        $generator = new IndexGenerator($outputPath);
+        $dataBuilder = app(IndexDataBuilderInterface::class);
+        $generator = new IndexGenerator($outputPath, $renderer, $dataBuilder);
         $generator->setMigrations($allMigrations);
         $generated = $generator->generateAll();
 
@@ -188,6 +203,15 @@ class IndexMigrationsCommand extends Command
         }
 
         return str_starts_with($resolvedPath, $basePath);
+    }
+
+    protected function resolveRenderer(string $format): ?RendererInterface
+    {
+        return match ($format) {
+            'markdown' => new MarkdownRenderer(),
+            'json' => new JsonRenderer(),
+            default => null,
+        };
     }
 
     protected function displaySummary(array $stats, string $outputPath): void

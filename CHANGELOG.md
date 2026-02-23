@@ -2,6 +2,22 @@
 
 All notable changes to `claude-skill-laravel-migration-searcher` will be documented in this file.
 
+## [1.1.0] - 2026-02-23
+
+### Added
+- JSON output format (`--format=json`)
+- `RendererInterface` contract for pluggable output formats
+- `IndexDataBuilderInterface` contract for data preparation
+- `IndexDataBuilder` service separating data logic from rendering
+- `JsonRenderer` for JSON output
+- `default_format` config option
+
+### Changed
+- `MarkdownRenderer` now implements `RendererInterface`, accepts structured data instead of raw migrations
+- `IndexGenerator` depends on `RendererInterface` + `IndexDataBuilderInterface` instead of concrete `MarkdownRenderer`
+- `IndexMigrationsCommand` supports `--format` option
+- `ServiceProvider` registers new bindings (`IndexDataBuilderInterface`, `RendererInterface`)
+
 ## [1.0.0] - 2026-02-17
 
 ### Added
@@ -9,16 +25,15 @@ All notable changes to `claude-skill-laravel-migration-searcher` will be documen
 
 ## Future Plans
 
-### [1.1.0] - Planned
+### [1.2.0] - Planned
 - Transaction detection (DB::transaction)
 - Seeder analysis
 - Rollback detection
 - Race condition warnings
 - Performance optimization for 5000+ migrations
 
-### [1.2.0] - Planned
+### [1.3.0] - Planned
 - Web UI for index browsing
-- Export to different formats (HTML, JSON)
 - Migration dependency graph visualization
 
 ---

@@ -4,10 +4,15 @@ namespace DevSite\LaravelMigrationSearcher;
 
 use DevSite\LaravelMigrationSearcher\Commands\IndexMigrationsCommand;
 use DevSite\LaravelMigrationSearcher\Contracts\FileWriterInterface;
+use DevSite\LaravelMigrationSearcher\Contracts\IndexDataBuilderInterface;
 use DevSite\LaravelMigrationSearcher\Contracts\IndexGeneratorInterface;
 use DevSite\LaravelMigrationSearcher\Contracts\MigrationAnalyzerInterface;
+use DevSite\LaravelMigrationSearcher\Contracts\RendererInterface;
+use DevSite\LaravelMigrationSearcher\Services\IndexDataBuilder;
 use DevSite\LaravelMigrationSearcher\Services\IndexGenerator;
 use DevSite\LaravelMigrationSearcher\Services\MigrationAnalyzer;
+use DevSite\LaravelMigrationSearcher\Services\Renderers\JsonRenderer;
+use DevSite\LaravelMigrationSearcher\Services\Renderers\MarkdownRenderer;
 use DevSite\LaravelMigrationSearcher\Services\Writers\IndexFileWriter;
 use Illuminate\Support\ServiceProvider;
 
@@ -22,9 +27,23 @@ class MigrationSearcherServiceProvider extends ServiceProvider
 
         $this->app->bind(FileWriterInterface::class, IndexFileWriter::class);
         $this->app->bind(MigrationAnalyzerInterface::class, MigrationAnalyzer::class);
+        $this->app->bind(IndexDataBuilderInterface::class, IndexDataBuilder::class);
+
+        $this->app->bind(RendererInterface::class, function () {
+            return match (config('migration-searcher.default_format', 'markdown')) {
+                'json' => new JsonRenderer(),
+                default => new MarkdownRenderer(),
+            };
+        });
+
         $this->app->bind(IndexGeneratorInterface::class, function ($app) {
             $outputPath = base_path(config('migration-searcher.output_path', '.claude/skills/laravel-migration-searcher'));
-            return new IndexGenerator($outputPath);
+
+            return new IndexGenerator(
+                $outputPath,
+                $app->make(RendererInterface::class),
+                $app->make(IndexDataBuilderInterface::class),
+            );
         });
     }
 

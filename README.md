@@ -20,6 +20,7 @@ Intelligent Laravel migration indexer with Claude AI integration. Automatically 
 - **Multiple Views** - Chronological, by-type, by-table, by-operation indexes
 - **Claude AI Integration** - Ships with SKILL.md template for Claude AI workflow
 - **Complexity Scoring** - Each migration gets a 1-10 complexity score
+- **Multiple Formats** - Markdown and JSON output formats
 - **Configurable** - Support for custom migration paths and types
 - **Team-Friendly** - Commit indexes to git, whole team benefits
 - **Zero Dependencies** - Only Laravel required
@@ -84,6 +85,9 @@ return [
         ],
     ],
 
+    // Default output format: 'markdown' or 'json'
+    'default_format' => 'markdown',
+
     // Path to SKILL.md template
     'skill_template_path' => '...',
 ];
@@ -97,6 +101,9 @@ return [
 # Index all migrations
 php artisan migrations:index
 
+# Generate JSON format instead of markdown
+php artisan migrations:index --format=json
+
 # Refresh existing index (deletes and regenerates)
 php artisan migrations:index --refresh
 
@@ -109,6 +116,7 @@ php artisan migrations:index --output=/custom/path
 
 ### Generated Output
 
+Default (markdown):
 ```
 .claude/skills/laravel-migration-searcher/
 ├── SKILL.md               # Instructions for Claude AI
@@ -117,6 +125,17 @@ php artisan migrations:index --output=/custom/path
 ├── index-by-table.md      # Grouped by database table
 ├── index-by-operation.md  # Grouped by operation (CREATE/ALTER/DROP/DATA/RENAME)
 └── stats.json             # Statistics and metadata (JSON)
+```
+
+With `--format=json`:
+```
+.claude/skills/laravel-migration-searcher/
+├── SKILL.md               # Instructions for Claude AI
+├── index-full.json        # Chronological list with full details
+├── index-by-type.json     # Grouped by migration type
+├── index-by-table.json    # Grouped by database table
+├── index-by-operation.json # Grouped by operation
+└── stats.json             # Statistics and metadata
 ```
 
 ### Using with Claude AI
@@ -248,12 +267,15 @@ src/
 ├── Contracts/                          # Interfaces
 │   ├── MigrationAnalyzerInterface.php
 │   ├── IndexGeneratorInterface.php
+│   ├── IndexDataBuilderInterface.php   # Data preparation contract
+│   ├── RendererInterface.php           # Output format contract
 │   ├── FileWriterInterface.php
 │   └── ContentParserInterface.php
 ├── Services/
 │   ├── MigrationAnalyzer.php           # Orchestrates parsers
 │   ├── ComplexityCalculator.php        # Pure function: calculates 1-10 score
-│   ├── IndexGenerator.php             # Orchestrates renderer + writer
+│   ├── IndexDataBuilder.php           # Sorts, groups, calculates stats
+│   ├── IndexGenerator.php             # Orchestrates data builder + renderer + writer
 │   ├── Parsers/
 │   │   ├── FileNameParser.php         # Timestamp, name, relative path
 │   │   ├── TableDetector.php          # Schema::create/table/drop/rename, DB::table
@@ -262,7 +284,8 @@ src/
 │   │   ├── RawSqlParser.php          # DB::statement, unprepared, raw, heredoc
 │   │   └── DependencyParser.php      # @requires, @depends_on, FK dependencies
 │   ├── Renderers/
-│   │   └── MarkdownRenderer.php      # Generates markdown content and stats JSON
+│   │   ├── MarkdownRenderer.php      # Formats structured data as markdown
+│   │   └── JsonRenderer.php          # Formats structured data as JSON
 │   └── Writers/
 │       └── IndexFileWriter.php       # File I/O (implements FileWriterInterface)
 ├── Commands/
@@ -271,6 +294,8 @@ src/
 │   └── FormatsFileSize.php
 └── MigrationSearcherServiceProvider.php  # Registers interface bindings
 ```
+
+Data flows through a clean pipeline: raw migrations → `IndexDataBuilder` (sort, group, stats) → `RendererInterface` (format to markdown/JSON) → file output. Adding a new format requires only a new class implementing `RendererInterface`.
 
 All interfaces are bound in the service provider, making it easy to swap implementations or mock in tests.
 

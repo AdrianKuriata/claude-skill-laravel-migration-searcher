@@ -118,6 +118,68 @@ class IndexMigrationsCommandTest extends TestCase
         $this->assertDirectoryExists($this->outputPath);
     }
 
+    // ── Format option ──────────────────────────────────────────────
+
+    public function testFormatOptionDefaultsToMarkdown(): void
+    {
+        $this->artisan('migrations:index', ['--output' => $this->outputPath])
+            ->assertSuccessful();
+
+        $this->assertFileExists($this->outputPath . '/index-full.md');
+        $this->assertFileExists($this->outputPath . '/index-by-type.md');
+    }
+
+    public function testFormatOptionJson(): void
+    {
+        $this->artisan('migrations:index', [
+            '--output' => $this->outputPath,
+            '--format' => 'json',
+        ])->assertSuccessful();
+
+        $this->assertFileExists($this->outputPath . '/index-full.json');
+        $this->assertFileExists($this->outputPath . '/index-by-type.json');
+        $this->assertFileExists($this->outputPath . '/index-by-table.json');
+        $this->assertFileExists($this->outputPath . '/index-by-operation.json');
+        $this->assertFileExists($this->outputPath . '/stats.json');
+
+        $fullIndex = json_decode(file_get_contents($this->outputPath . '/index-full.json'), true);
+        $this->assertNotNull($fullIndex);
+        $this->assertArrayHasKey('migrations', $fullIndex);
+    }
+
+    public function testFormatOptionJsonStatsContainsCorrectData(): void
+    {
+        $this->artisan('migrations:index', [
+            '--output' => $this->outputPath,
+            '--format' => 'json',
+        ])->assertSuccessful();
+
+        $stats = json_decode(file_get_contents($this->outputPath . '/stats.json'), true);
+        $this->assertNotNull($stats);
+        $this->assertArrayHasKey('total_migrations', $stats);
+        $this->assertGreaterThan(0, $stats['total_migrations']);
+    }
+
+    public function testInvalidFormatShowsError(): void
+    {
+        $this->artisan('migrations:index', [
+            '--output' => $this->outputPath,
+            '--format' => 'xml',
+        ])
+            ->expectsOutputToContain('Unsupported format')
+            ->assertFailed();
+    }
+
+    public function testFormatOptionRespectsConfigDefault(): void
+    {
+        $this->app['config']->set('migration-searcher.default_format', 'json');
+
+        $this->artisan('migrations:index', ['--output' => $this->outputPath])
+            ->assertSuccessful();
+
+        $this->assertFileExists($this->outputPath . '/index-full.json');
+    }
+
     // ── SKILL.md ────────────────────────────────────────────────────
 
     public function testCopiesSkillMdTemplate(): void

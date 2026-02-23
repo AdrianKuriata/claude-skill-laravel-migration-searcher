@@ -2,7 +2,11 @@
 
 namespace Tests\Unit;
 
+use DevSite\LaravelMigrationSearcher\Contracts\RendererInterface;
+use DevSite\LaravelMigrationSearcher\Services\IndexDataBuilder;
 use DevSite\LaravelMigrationSearcher\Services\IndexGenerator;
+use DevSite\LaravelMigrationSearcher\Services\Renderers\JsonRenderer;
+use DevSite\LaravelMigrationSearcher\Services\Renderers\MarkdownRenderer;
 use Illuminate\Support\Facades\File;
 use Tests\TestCase;
 
@@ -174,7 +178,6 @@ class IndexGeneratorTest extends TestCase
 
         $content = file_get_contents($this->outputPath . '/index-full.md');
 
-        // 2024_01_15 should appear before 2024_02_01 which is before 2024_03_10
         $pos1 = strpos($content, '2024_01_15_100000_create_users_table.php');
         $pos2 = strpos($content, '2024_02_01_100000_raw_sql.php');
         $pos3 = strpos($content, '2024_03_10_100000_data_migration.php');
@@ -232,7 +235,6 @@ class IndexGeneratorTest extends TestCase
     public function testByTableSortedAlphabetically(): void
     {
         $migrations = $this->sampleMigrations();
-        // Add a table that should appear before 'users' alphabetically
         $migrations[0]['tables']['accounts'] = ['operation' => 'CREATE', 'methods' => []];
         $this->generator->setMigrations($migrations);
         $this->generator->generateAll();
@@ -398,7 +400,6 @@ class IndexGeneratorTest extends TestCase
         $generated = $this->generator->generateAll();
 
         $content = file_get_contents($generated['by_table']);
-        // Should still be a valid file, just with no table sections
         $this->assertStringContainsString('Grouped by Tables', $content);
     }
 
@@ -704,5 +705,74 @@ class IndexGeneratorTest extends TestCase
         $content = file_get_contents($this->outputPath . '/index-by-type.md');
 
         $this->assertStringContainsString('Modifies data', $content);
+    }
+
+    // ── Dynamic file extensions ─────────────────────────────────────
+
+    public function testGenerateAllUsesRendererFileExtension(): void
+    {
+        $generator = new IndexGenerator($this->outputPath, new JsonRenderer(), new IndexDataBuilder());
+        $generator->setMigrations($this->sampleMigrations());
+        $generated = $generator->generateAll();
+
+        $this->assertStringEndsWith('/index-full.json', $generated['full']);
+        $this->assertStringEndsWith('/index-by-type.json', $generated['by_type']);
+        $this->assertStringEndsWith('/index-by-table.json', $generated['by_table']);
+        $this->assertStringEndsWith('/index-by-operation.json', $generated['by_operation']);
+        $this->assertStringEndsWith('/stats.json', $generated['stats']);
+
+        foreach ($generated as $path) {
+            $this->assertFileExists($path);
+        }
+    }
+
+    public function testGenerateAllWithJsonRendererProducesValidJson(): void
+    {
+        $generator = new IndexGenerator($this->outputPath, new JsonRenderer(), new IndexDataBuilder());
+        $generator->setMigrations($this->sampleMigrations());
+        $generated = $generator->generateAll();
+
+        foreach ($generated as $path) {
+            $decoded = json_decode(file_get_contents($path), true);
+            $this->assertNotNull($decoded, "Invalid JSON in: {$path}");
+        }
+    }
+
+    public function testGenerateAllWithMarkdownRendererUsesCorrectExtension(): void
+    {
+        $generator = new IndexGenerator($this->outputPath, new MarkdownRenderer(), new IndexDataBuilder());
+        $generator->setMigrations([]);
+        $generated = $generator->generateAll();
+
+        $this->assertStringEndsWith('/index-full.md', $generated['full']);
+        $this->assertStringEndsWith('/index-by-type.md', $generated['by_type']);
+    }
+
+    public function testStatsAlwaysJson(): void
+    {
+        $generator = new IndexGenerator($this->outputPath, new MarkdownRenderer(), new IndexDataBuilder());
+        $generator->setMigrations($this->sampleMigrations());
+        $generated = $generator->generateAll();
+
+        $this->assertStringEndsWith('/stats.json', $generated['stats']);
+        $decoded = json_decode(file_get_contents($generated['stats']), true);
+        $this->assertNotNull($decoded);
+    }
+
+    public function testAcceptsRendererInterface(): void
+    {
+        $mockRenderer = $this->createMock(RendererInterface::class);
+        $mockRenderer->method('getFileExtension')->willReturn('xml');
+        $mockRenderer->method('renderFullIndex')->willReturn('<xml/>');
+        $mockRenderer->method('renderByTypeIndex')->willReturn('<xml/>');
+        $mockRenderer->method('renderByTableIndex')->willReturn('<xml/>');
+        $mockRenderer->method('renderByOperationIndex')->willReturn('<xml/>');
+        $mockRenderer->method('renderStats')->willReturn('<xml/>');
+
+        $generator = new IndexGenerator($this->outputPath, $mockRenderer, new IndexDataBuilder());
+        $generator->setMigrations([]);
+        $generated = $generator->generateAll();
+
+        $this->assertStringEndsWith('/index-full.xml', $generated['full']);
     }
 }

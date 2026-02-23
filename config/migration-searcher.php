@@ -53,4 +53,15 @@ return [
     |
     */
     'skill_template_path' => __DIR__.'/../resources/skill-template/SKILL.md',
+
+    /*
+    |--------------------------------------------------------------------------
+    | Default Output Format
+    |--------------------------------------------------------------------------
+    |
+    | The default output format for generated index files.
+    | Supported: "markdown", "json"
+    |
+    */
+    'default_format' => 'markdown',
 ];

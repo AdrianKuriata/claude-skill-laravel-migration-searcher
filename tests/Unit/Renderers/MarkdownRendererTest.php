@@ -2,17 +2,20 @@
 
 namespace Tests\Unit\Renderers;
 
+use DevSite\LaravelMigrationSearcher\Services\IndexDataBuilder;
 use DevSite\LaravelMigrationSearcher\Services\Renderers\MarkdownRenderer;
 use Tests\TestCase;
 
 class MarkdownRendererTest extends TestCase
 {
     protected MarkdownRenderer $renderer;
+    protected IndexDataBuilder $dataBuilder;
 
     protected function setUp(): void
     {
         parent::setUp();
         $this->renderer = new MarkdownRenderer();
+        $this->dataBuilder = new IndexDataBuilder();
     }
 
     protected function sampleMigration(): array
@@ -38,45 +41,57 @@ class MarkdownRendererTest extends TestCase
         ];
     }
 
+    public function testGetFileExtension(): void
+    {
+        $this->assertSame('md', $this->renderer->getFileExtension());
+    }
+
     public function testRenderFullIndexContainsMigrationFilename(): void
     {
-        $content = $this->renderer->renderFullIndex([$this->sampleMigration()]);
+        $data = $this->dataBuilder->buildFullIndex([$this->sampleMigration()]);
+        $content = $this->renderer->renderFullIndex($data);
         $this->assertStringContainsString('2024_01_15_100000_create_users_table.php', $content);
     }
 
     public function testRenderFullIndexContainsHeader(): void
     {
-        $content = $this->renderer->renderFullIndex([]);
+        $data = $this->dataBuilder->buildFullIndex([]);
+        $content = $this->renderer->renderFullIndex($data);
         $this->assertStringContainsString('# Full Laravel Migrations Index', $content);
     }
 
     public function testRenderByTypeIndexContainsTypeHeaders(): void
     {
-        $content = $this->renderer->renderByTypeIndex([$this->sampleMigration()]);
+        $data = $this->dataBuilder->buildByTypeIndex([$this->sampleMigration()]);
+        $content = $this->renderer->renderByTypeIndex($data);
         $this->assertStringContainsString('## default', $content);
     }
 
     public function testRenderByTypeIndexEmptyShowsNoMigrations(): void
     {
-        $content = $this->renderer->renderByTypeIndex([]);
+        $data = $this->dataBuilder->buildByTypeIndex([]);
+        $content = $this->renderer->renderByTypeIndex($data);
         $this->assertStringContainsString('*No migrations found*', $content);
     }
 
     public function testRenderByTableIndexGroupsByTable(): void
     {
-        $content = $this->renderer->renderByTableIndex([$this->sampleMigration()]);
+        $data = $this->dataBuilder->buildByTableIndex([$this->sampleMigration()]);
+        $content = $this->renderer->renderByTableIndex($data);
         $this->assertStringContainsString('## Table: `users`', $content);
     }
 
     public function testRenderByOperationIndexGroupsByOperation(): void
     {
-        $content = $this->renderer->renderByOperationIndex([$this->sampleMigration()]);
+        $data = $this->dataBuilder->buildByOperationIndex([$this->sampleMigration()]);
+        $content = $this->renderer->renderByOperationIndex($data);
         $this->assertStringContainsString('Table Creation (CREATE)', $content);
     }
 
     public function testRenderStatsReturnsValidJson(): void
     {
-        $statsJson = $this->renderer->renderStats([$this->sampleMigration()]);
+        $data = $this->dataBuilder->buildStats([$this->sampleMigration()]);
+        $statsJson = $this->renderer->renderStats($data);
         $stats = json_decode($statsJson, true);
 
         $this->assertIsArray($stats);
@@ -235,7 +250,8 @@ class MarkdownRendererTest extends TestCase
             ],
         ];
 
-        $content = $this->renderer->renderByOperationIndex([$migration]);
+        $data = $this->dataBuilder->buildByOperationIndex([$migration]);
+        $content = $this->renderer->renderByOperationIndex($data);
         $this->assertStringContainsString('WHERE:', $content);
         $this->assertStringContainsString('columns: status', $content);
     }
@@ -246,7 +262,8 @@ class MarkdownRendererTest extends TestCase
         $migration['tables'] = ['users' => ['operation' => 'ALTER', 'methods' => []]];
         $migration['columns'] = ['bio' => ['type' => 'text', 'modifiers' => []]];
 
-        $content = $this->renderer->renderByOperationIndex([$migration]);
+        $data = $this->dataBuilder->buildByOperationIndex([$migration]);
+        $content = $this->renderer->renderByOperationIndex($data);
         $this->assertStringContainsString('Affected columns', $content);
         $this->assertStringContainsString('bio', $content);
     }
@@ -258,7 +275,8 @@ class MarkdownRendererTest extends TestCase
             ['type' => 'statement', 'sql' => 'SELECT 1', 'operation' => 'SELECT'],
         ];
 
-        $content = $this->renderer->renderByOperationIndex([$migration]);
+        $data = $this->dataBuilder->buildByOperationIndex([$migration]);
+        $content = $this->renderer->renderByOperationIndex($data);
         $this->assertStringContainsString('## Raw SQL', $content);
     }
 
@@ -311,7 +329,8 @@ class MarkdownRendererTest extends TestCase
             ];
         }
 
-        $statsJson = $this->renderer->renderStats($migrations);
+        $data = $this->dataBuilder->buildStats($migrations);
+        $statsJson = $this->renderer->renderStats($data);
         $stats = json_decode($statsJson, true);
         $this->assertLessThanOrEqual(50, count($stats['tables']));
     }
