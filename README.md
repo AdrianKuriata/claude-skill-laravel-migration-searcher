@@ -282,7 +282,7 @@ All interfaces are bound in the service provider, making it easy to swap impleme
 ## Testing
 
 ```bash
-docker compose -f docker-compose.test.yml up --build --abort-on-container-exit --remove-orphans && docker compose -f docker-compose.test.yml down
+docker compose -f docker-compose.test.yml run --rm tests
 ```
 
 ### Code Coverage
