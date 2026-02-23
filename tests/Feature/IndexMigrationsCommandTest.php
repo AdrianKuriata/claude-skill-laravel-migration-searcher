@@ -91,21 +91,73 @@ class IndexMigrationsCommandTest extends TestCase
             ->assertFailed();
     }
 
-    public function testRefreshDeletesAndRecreates(): void
+    public function testRefreshRecreatesIndexFiles(): void
     {
         $this->artisan('migrations:index', ['--output' => $this->outputPath])
             ->assertSuccessful();
 
-        $markerFile = $this->outputPath . '/should-be-deleted.txt';
-        file_put_contents($markerFile, 'marker');
+        $this->assertFileExists($this->outputPath . '/index-full.md');
 
         $this->artisan('migrations:index', [
             '--output' => $this->outputPath,
             '--refresh' => true,
         ])->assertSuccessful();
 
-        $this->assertFileDoesNotExist($markerFile);
         $this->assertFileExists($this->outputPath . '/index-full.md');
+        $this->assertFileExists($this->outputPath . '/stats.json');
+    }
+
+    public function testRefreshPreservesSkillMd(): void
+    {
+        $this->artisan('migrations:index', ['--output' => $this->outputPath])
+            ->assertSuccessful();
+
+        $skillPath = $this->outputPath . '/SKILL.md';
+        file_put_contents($skillPath, 'CUSTOM USER CONTENT');
+
+        $this->artisan('migrations:index', [
+            '--output' => $this->outputPath,
+            '--refresh' => true,
+        ])->assertSuccessful();
+
+        $this->assertFileExists($skillPath);
+        $this->assertSame('CUSTOM USER CONTENT', file_get_contents($skillPath));
+    }
+
+    public function testRefreshCleansAllGeneratedFormats(): void
+    {
+        $this->artisan('migrations:index', [
+            '--output' => $this->outputPath,
+            '--format' => 'json',
+        ])->assertSuccessful();
+
+        $this->assertFileExists($this->outputPath . '/index-full.json');
+
+        $this->artisan('migrations:index', [
+            '--output' => $this->outputPath,
+            '--refresh' => true,
+            '--format' => 'markdown',
+        ])->assertSuccessful();
+
+        $this->assertFileDoesNotExist($this->outputPath . '/index-full.json');
+        $this->assertFileExists($this->outputPath . '/index-full.md');
+    }
+
+    public function testRefreshDoesNotDeleteNonGeneratedFiles(): void
+    {
+        $this->artisan('migrations:index', ['--output' => $this->outputPath])
+            ->assertSuccessful();
+
+        $userFile = $this->outputPath . '/my-notes.txt';
+        file_put_contents($userFile, 'user content');
+
+        $this->artisan('migrations:index', [
+            '--output' => $this->outputPath,
+            '--refresh' => true,
+        ])->assertSuccessful();
+
+        $this->assertFileExists($userFile);
+        $this->assertSame('user content', file_get_contents($userFile));
     }
 
     public function testRefreshOnNonExistentDirectory(): void

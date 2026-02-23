@@ -65,7 +65,7 @@ class IndexMigrationsCommand extends Command
 
         if ($this->option('refresh') && File::exists($outputPath)) {
             $this->warn('Cleaning existing index...');
-            File::deleteDirectory($outputPath);
+            $this->cleanGeneratedFiles($outputPath);
         }
 
         if (!File::exists($outputPath)) {
@@ -212,6 +212,17 @@ class IndexMigrationsCommand extends Command
             'json' => new JsonRenderer(),
             default => null,
         };
+    }
+
+    protected function cleanGeneratedFiles(string $outputPath): void
+    {
+        $patterns = ['index-*', 'stats.json'];
+
+        foreach ($patterns as $pattern) {
+            foreach (File::glob($outputPath . '/' . $pattern) as $file) {
+                File::delete($file);
+            }
+        }
     }
 
     protected function displaySummary(array $stats, string $outputPath): void

@@ -2,6 +2,11 @@
 
 All notable changes to `claude-skill-laravel-migration-searcher` will be documented in this file.
 
+## [1.1.1] - 2026-02-23
+
+### Fixed
+- `--refresh` no longer deletes the entire output directory — only generated files (`index-*`, `stats.json`) are removed, preserving user-modified `SKILL.md` and other custom files
+
 ## [1.1.0] - 2026-02-23
 
 ### Added
