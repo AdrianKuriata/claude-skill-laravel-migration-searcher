@@ -1,5 +1,13 @@
 # Laravel Migrations Searcher Skill
 
+## MANDATORY
+
+**CRITICAL — READ BEFORE ANSWERING ANY MIGRATION QUESTION:**
+
+1. You MUST read the appropriate index file BEFORE responding to any migration-related question. NO EXCEPTIONS.
+2. You MUST search across ALL migration types in the index, not just `default`. The project may have multiple types (e.g., `tenants`, `packages`, `import_before`). Ignoring any type means incomplete results.
+3. NEVER answer from memory or assumptions — ALWAYS verify against the index.
+
 ## Purpose
 
 This skill helps manage and search through large numbers of Laravel migrations in your project. The index contains detailed analysis of each migration including:
@@ -25,17 +33,35 @@ php artisan migrations:index
 4. **index-by-operation.md** - Grouped by operations (CREATE/ALTER/DATA/DROP)
 5. **stats.json** - Statistics and metadata
 
+## Migration Types
+
+The configuration supports multiple migration types (`default`, `tenants`, `packages`, etc.). ALL index files contain migrations from ALL configured types. You MUST search through every type, not just `default`.
+
+How to identify migration types in each index file:
+- **index-full.md**: `**Type:** {type}` field on each entry
+- **index-by-type.md**: `## {type}` section headers
+- **index-by-table.md**: `**Migration type:** {type}` field on each entry
+- **index-by-operation.md**: `**Migration type:** {type}` field on each entry
+- **stats.json**: `by_type` key contains per-type statistics
+
 ## How Claude Uses This Skill
 
 ### 1. Always Read the Index First
 
-**ALWAYS** start by reading the appropriate index file:
+**CRITICAL: You MUST read the index BEFORE answering ANY question about migrations. NO EXCEPTIONS.**
+
+Follow this exact sequence:
+1. Open the appropriate index file for the query
+2. Search through ALL migration types visible in the index (not just `default`)
+3. Collect results from ALL types
+4. Only then respond to the user
 
 ```
 User: "Find the migration that adds subscription_plan column to users"
 Claude: [view .claude/skills/laravel-migration-searcher/index-by-table.md]
-        [searches in "users" section]
-        [finds relevant migrations]
+        [searches "users" section across ALL migration types]
+        [collects matching migrations from every type]
+        [responds with grouped results]
 ```
 
 ### 2. Ask Clarifying Questions
@@ -55,6 +81,9 @@ Claude: [ask_user_input_v0]
 - **Searching by migration type?** → `index-by-type.md`
 - **Searching for data modifications?** → `index-by-operation.md`
 - **Overview of everything?** → `index-full.md`
+- **Quick stats and type overview?** → `stats.json`
+
+> **Note:** All index files (except `stats.json`) contain migrations from ALL configured migration types. You MUST search through all types in the file, not just the first one you encounter.
 
 ### 4. Always Provide Context
 
@@ -132,22 +161,55 @@ This migration deletes orders that are cancelled AND created before 2023-01-01.
 Is this the migration you're looking for?
 ```
 
+### Example 5: Searching Across Migration Types
+
+```
+User: "Find all migrations that modify the users table"
+
+Claude:
+1. [view .claude/skills/laravel-migration-searcher/index-by-table.md]
+2. Searches "users" section — finds migrations from ALL types
+3. Groups results by migration type
+4. Responds:
+
+Found 5 migrations affecting the `users` table across 2 types:
+
+**[default]** (3 migrations)
+- 2024_01_10_create_users_table.php — CREATE TABLE
+- 2024_01_15_add_subscription_plan.php — ALTER (add columns)
+- 2024_02_01_add_avatar_to_users.php — ALTER (add column)
+
+**[tenants]** (2 migrations)
+- 2024_01_16_add_tenant_subscription.php — ALTER (add columns)
+- 2024_03_01_add_tenant_settings_to_users.php — ALTER (add column)
+
+Would you like details on any specific migration?
+```
+
 ## Response Formatting
 
 ### ✅ GOOD:
 
 ```
-Found the migration responsible for this issue:
+Found 2 migrations across different types:
 
+**[default]**
 **File:** database/migrations/2024_01_15_add_subscription_plan.php
 **Type:** default
 **Operations:**
 - ALTER TABLE users ADD COLUMN subscription_plan VARCHAR(50)
 - ALTER TABLE users ADD INDEX idx_subscription_plan
 
+**[tenants]**
+**File:** database/tenant-migrations/2024_01_16_add_tenant_subscription.php
+**Type:** tenants
+**Operations:**
+- ALTER TABLE users ADD COLUMN subscription_plan VARCHAR(50)
+- ALTER TABLE users ADD COLUMN tenant_plan_override BOOLEAN DEFAULT FALSE
+
 **Related migrations:**
-- 2024_01_10_prepare_subscription_data.php (prepares data)
-- 2024_01_20_verify_subscriptions.php (verifies after completion)
+- [default] 2024_01_10_prepare_subscription_data.php (prepares data)
+- [default] 2024_01_20_verify_subscriptions.php (verifies after completion)
 
 Would you like to see the full contents of any of these migrations?
 ```
@@ -176,6 +238,7 @@ php artisan migrations:index --refresh
 3. **ASK** when something is unclear - better to ask than to guess
 4. **CONTEXT** - always provide full context of found migrations
 5. **VERIFY** - if unsure, check the index instead of guessing
+6. **ALL TYPES** - ALWAYS search across ALL migration types, not just "default". Report the type for every migration in results
 
 ## Index Entry Structure
 
@@ -285,9 +348,10 @@ Clarifying questions:
 3. **Show full context** - path, type, operations, dependencies
 4. **Group results** - if you found 10 migrations, group them logically
 5. **Warn about dependencies** - always check dependencies before modifications
+6. **Check all types** - never assume migrations only exist in "default". Always search across ALL configured migration types
 
 ---
 
-**Version:** 1.0  
-**Last Update:** 2026-02-17  
+**Version:** 1.2
+**Last Update:** 2026-02-24
 **Author:** Laravel Migration Searcher System

@@ -2,6 +2,15 @@
 
 All notable changes to `claude-skill-laravel-migration-searcher` will be documented in this file.
 
+## [1.2.0] - 2026-02-24
+
+### Changed
+- Updated SKILL.md template: added mandatory index-first search constraint
+- Updated SKILL.md template: added multi-type migration awareness (Migration Types section)
+- Updated SKILL.md template: added Example 5 for multi-type search scenario
+- Updated SKILL.md template: improved response formatting examples with multi-type output
+- Updated SKILL.md template: strengthened rules and best practices for multi-type coverage
+
 ## [1.1.1] - 2026-02-23
 
 ### Fixed
@@ -30,14 +39,14 @@ All notable changes to `claude-skill-laravel-migration-searcher` will be documen
 
 ## Future Plans
 
-### [1.2.0] - Planned
+### [1.3.0] - Planned
 - Transaction detection (DB::transaction)
 - Seeder analysis
 - Rollback detection
 - Race condition warnings
 - Performance optimization for 5000+ migrations
 
-### [1.3.0] - Planned
+### [1.4.0] - Planned
 - Web UI for index browsing
 - Migration dependency graph visualization
 
