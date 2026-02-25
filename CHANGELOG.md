@@ -2,6 +2,18 @@
 
 All notable changes to `claude-skill-laravel-migration-searcher` will be documented in this file.
 
+## [1.3.0] - 2026-02-25
+
+### Added
+- `BaseDTO` abstract class with automatic `toArray()` via reflection (camelCase → snake_case) implementing `Illuminate\Contracts\Support\Arrayable`
+- `MigrationAnalysisResult` DTO — typed, immutable output from `MigrationAnalyzer::analyze()`
+
+### Changed
+- `MigrationAnalyzerInterface::analyze()` now returns `MigrationAnalysisResult` instead of raw array
+- `ComplexityCalculator::calculate()` accepts individual array parameters instead of full result array (ISP)
+- `MigrationAnalyzer::analyze()` returns `MigrationAnalysisResult` DTO
+- `IndexMigrationsCommand` converts DTO to array via `toArray()` before passing to IndexGenerator
+
 ## [1.2.2] - 2026-02-25
 
 ### Changed

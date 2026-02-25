@@ -2,6 +2,7 @@
 
 namespace Tests\Unit;
 
+use DevSite\LaravelMigrationSearcher\DTOs\MigrationAnalysisResult;
 use DevSite\LaravelMigrationSearcher\Services\MigrationAnalyzer;
 use Illuminate\Support\Facades\File;
 use Tests\TestCase;
@@ -16,14 +17,14 @@ class MigrationAnalyzerTest extends TestCase
         $this->analyzer = new MigrationAnalyzer();
     }
 
-    protected function analyzeFixture(string $filename): array
+    protected function analyzeFixture(string $filename): MigrationAnalysisResult
     {
         $filepath = $this->getFixturePath($filename);
 
         return $this->analyzer->analyze($filepath, 'default');
     }
 
-    protected function analyzeContent(string $content, string $filename = '2024_01_01_000000_test.php'): array
+    protected function analyzeContent(string $content, string $filename = '2024_01_01_000000_test.php'): MigrationAnalysisResult
     {
         $tmpDir = sys_get_temp_dir() . '/migration-analyzer-test-' . uniqid();
         mkdir($tmpDir, 0755, true);
@@ -38,13 +39,22 @@ class MigrationAnalyzerTest extends TestCase
         }
     }
 
+    // ── Return Type ────────────────────────────────────────────────
+
+    public function testAnalyzeReturnsMigrationAnalysisResult(): void
+    {
+        $result = $this->analyzeFixture('2024_01_15_100000_create_users_table.php');
+
+        $this->assertInstanceOf(MigrationAnalysisResult::class, $result);
+    }
+
     // ── Timestamp/Name ──────────────────────────────────────────────
 
     public function testExtractsTimestampFromStandardFilename(): void
     {
         $result = $this->analyzeFixture('2024_01_15_100000_create_users_table.php');
 
-        $this->assertSame('2024_01_15_100000', $result['timestamp']);
+        $this->assertSame('2024_01_15_100000', $result->timestamp);
     }
 
     public function testReturnsUnknownForNonStandardFilename(): void
@@ -52,14 +62,14 @@ class MigrationAnalyzerTest extends TestCase
         $content = "<?php\n// empty migration\n";
         $result = $this->analyzeContent($content, 'custom_migration.php');
 
-        $this->assertSame('unknown', $result['timestamp']);
+        $this->assertSame('unknown', $result->timestamp);
     }
 
     public function testExtractsMigrationNameWithoutTimestamp(): void
     {
         $result = $this->analyzeFixture('2024_01_15_100000_create_users_table.php');
 
-        $this->assertSame('create_users_table', $result['name']);
+        $this->assertSame('create_users_table', $result->name);
     }
 
     // ── Table Detection ─────────────────────────────────────────────
@@ -68,49 +78,49 @@ class MigrationAnalyzerTest extends TestCase
     {
         $result = $this->analyzeFixture('2024_01_15_100000_create_users_table.php');
 
-        $this->assertArrayHasKey('users', $result['tables']);
-        $this->assertSame('CREATE', $result['tables']['users']['operation']);
+        $this->assertArrayHasKey('users', $result->tables);
+        $this->assertSame('CREATE', $result->tables['users']['operation']);
     }
 
     public function testDetectsSchemaTable(): void
     {
         $result = $this->analyzeFixture('2024_02_20_100000_alter_users_add_avatar.php');
 
-        $this->assertArrayHasKey('users', $result['tables']);
-        $this->assertSame('ALTER', $result['tables']['users']['operation']);
+        $this->assertArrayHasKey('users', $result->tables);
+        $this->assertSame('ALTER', $result->tables['users']['operation']);
     }
 
     public function testDetectsSchemaDropIfExists(): void
     {
         $result = $this->analyzeFixture('2024_03_10_100000_drop_legacy_table.php');
 
-        $this->assertArrayHasKey('legacy_settings', $result['tables']);
-        $this->assertSame('DROP', $result['tables']['legacy_settings']['operation']);
+        $this->assertArrayHasKey('legacy_settings', $result->tables);
+        $this->assertSame('DROP', $result->tables['legacy_settings']['operation']);
     }
 
     public function testDetectsSchemaRename(): void
     {
         $result = $this->analyzeFixture('2024_04_01_100000_rename_orders.php');
 
-        $this->assertArrayHasKey('orders', $result['tables']);
-        $this->assertSame('RENAME', $result['tables']['orders']['operation']);
+        $this->assertArrayHasKey('orders', $result->tables);
+        $this->assertSame('RENAME', $result->tables['orders']['operation']);
     }
 
     public function testDetectsDbTable(): void
     {
         $result = $this->analyzeFixture('2024_05_15_100000_data_migration.php');
 
-        $this->assertArrayHasKey('users', $result['tables']);
-        $this->assertSame('DATA', $result['tables']['users']['operation']);
+        $this->assertArrayHasKey('users', $result->tables);
+        $this->assertSame('DATA', $result->tables['users']['operation']);
     }
 
     public function testMultipleTablesInOneMigration(): void
     {
         $result = $this->analyzeFixture('2024_07_01_100000_complex_migration.php');
 
-        $this->assertArrayHasKey('categories', $result['tables']);
-        $this->assertArrayHasKey('products', $result['tables']);
-        $this->assertArrayHasKey('product_variants', $result['tables']);
+        $this->assertArrayHasKey('categories', $result->tables);
+        $this->assertArrayHasKey('products', $result->tables);
+        $this->assertArrayHasKey('product_variants', $result->tables);
     }
 
     public function testSchemaCreatePrecedenceOverDbTable(): void
@@ -125,7 +135,7 @@ class MigrationAnalyzerTest extends TestCase
 
         $result = $this->analyzeContent($content);
 
-        $this->assertSame('CREATE', $result['tables']['items']['operation']);
+        $this->assertSame('CREATE', $result->tables['items']['operation']);
     }
 
     // ── DDL Operations ──────────────────────────────────────────────
@@ -134,7 +144,7 @@ class MigrationAnalyzerTest extends TestCase
     {
         $result = $this->analyzeFixture('2024_01_15_100000_create_users_table.php');
 
-        $categories = array_column($result['ddl_operations'], 'category');
+        $categories = array_column($result->ddlOperations, 'category');
         $this->assertContains('column_create', $categories);
     }
 
@@ -142,7 +152,7 @@ class MigrationAnalyzerTest extends TestCase
     {
         $result = $this->analyzeFixture('2024_07_01_100000_complex_migration.php');
 
-        $indexOps = array_filter($result['ddl_operations'], fn($op) => $op['category'] === 'index');
+        $indexOps = array_filter($result->ddlOperations, fn($op) => $op['category'] === 'index');
         $this->assertNotEmpty($indexOps);
     }
 
@@ -150,7 +160,7 @@ class MigrationAnalyzerTest extends TestCase
     {
         $result = $this->analyzeFixture('2024_07_01_100000_complex_migration.php');
 
-        $fkOps = array_filter($result['ddl_operations'], fn($op) => $op['category'] === 'foreign_key');
+        $fkOps = array_filter($result->ddlOperations, fn($op) => $op['category'] === 'foreign_key');
         $this->assertNotEmpty($fkOps);
     }
 
@@ -167,7 +177,7 @@ class MigrationAnalyzerTest extends TestCase
 
         $result = $this->analyzeContent($content);
 
-        $categories = array_column($result['ddl_operations'], 'category');
+        $categories = array_column($result->ddlOperations, 'category');
         $this->assertContains('column_modify', $categories);
         $this->assertContains('index_drop', $categories);
         $this->assertContains('foreign_key_drop', $categories);
@@ -179,7 +189,7 @@ class MigrationAnalyzerTest extends TestCase
     {
         $result = $this->analyzeFixture('2024_05_15_100000_data_migration.php');
 
-        $updates = array_filter($result['dml_operations'], fn($op) => $op['type'] === 'UPDATE');
+        $updates = array_filter($result->dmlOperations, fn($op) => $op['type'] === 'UPDATE');
         $this->assertNotEmpty($updates);
 
         $update = array_values($updates)[0];
@@ -200,7 +210,7 @@ class MigrationAnalyzerTest extends TestCase
 
         $result = $this->analyzeContent($content);
 
-        $inserts = array_filter($result['dml_operations'], fn($op) => $op['type'] === 'INSERT');
+        $inserts = array_filter($result->dmlOperations, fn($op) => $op['type'] === 'INSERT');
         $this->assertNotEmpty($inserts);
     }
 
@@ -208,7 +218,7 @@ class MigrationAnalyzerTest extends TestCase
     {
         $result = $this->analyzeFixture('2024_05_15_100000_data_migration.php');
 
-        $deletes = array_filter($result['dml_operations'], fn($op) => $op['type'] === 'DELETE');
+        $deletes = array_filter($result->dmlOperations, fn($op) => $op['type'] === 'DELETE');
         $this->assertNotEmpty($deletes);
     }
 
@@ -217,7 +227,7 @@ class MigrationAnalyzerTest extends TestCase
         $result = $this->analyzeFixture('2024_09_01_100000_eloquent_ops.php');
 
         $eloquentInserts = array_filter(
-            $result['dml_operations'],
+            $result->dmlOperations,
             fn($op) => $op['type'] === 'INSERT' && isset($op['method']) && str_contains($op['method'], 'Eloquent::create')
         );
         $this->assertNotEmpty($eloquentInserts);
@@ -228,7 +238,7 @@ class MigrationAnalyzerTest extends TestCase
         $result = $this->analyzeFixture('2024_09_01_100000_eloquent_ops.php');
 
         $saves = array_filter(
-            $result['dml_operations'],
+            $result->dmlOperations,
             fn($op) => $op['type'] === 'UPDATE/INSERT' && isset($op['method']) && str_contains($op['method'], 'save')
         );
         $this->assertNotEmpty($saves);
@@ -239,7 +249,7 @@ class MigrationAnalyzerTest extends TestCase
         $result = $this->analyzeFixture('2024_09_01_100000_eloquent_ops.php');
 
         $relationCreates = array_filter(
-            $result['dml_operations'],
+            $result->dmlOperations,
             fn($op) => isset($op['relation'])
         );
         $this->assertNotEmpty($relationCreates);
@@ -250,7 +260,7 @@ class MigrationAnalyzerTest extends TestCase
         $result = $this->analyzeFixture('2024_09_01_100000_eloquent_ops.php');
 
         $deletes = array_filter(
-            $result['dml_operations'],
+            $result->dmlOperations,
             fn($op) => $op['type'] === 'DELETE' && isset($op['method']) && str_contains($op['method'], 'delete')
         );
         $this->assertNotEmpty($deletes);
@@ -261,7 +271,7 @@ class MigrationAnalyzerTest extends TestCase
         $result = $this->analyzeFixture('2024_09_01_100000_eloquent_ops.php');
 
         $loops = array_filter(
-            $result['dml_operations'],
+            $result->dmlOperations,
             fn($op) => $op['type'] === 'LOOP'
         );
         $this->assertNotEmpty($loops);
@@ -276,7 +286,7 @@ class MigrationAnalyzerTest extends TestCase
         $result = $this->analyzeFixture('2024_06_01_100000_raw_sql_migration.php');
 
         $updatesWithRaw = array_filter(
-            $result['dml_operations'],
+            $result->dmlOperations,
             fn($op) => $op['type'] === 'UPDATE' && !empty($op['has_db_raw'])
         );
         $this->assertNotEmpty($updatesWithRaw);
@@ -292,7 +302,7 @@ class MigrationAnalyzerTest extends TestCase
     {
         $result = $this->analyzeFixture('2024_06_01_100000_raw_sql_migration.php');
 
-        $statements = array_filter($result['raw_sql'], fn($s) => $s['type'] === 'statement');
+        $statements = array_filter($result->rawSql, fn($s) => $s['type'] === 'statement');
         $this->assertNotEmpty($statements);
     }
 
@@ -300,7 +310,7 @@ class MigrationAnalyzerTest extends TestCase
     {
         $result = $this->analyzeFixture('2024_06_01_100000_raw_sql_migration.php');
 
-        $unprepared = array_filter($result['raw_sql'], fn($s) => $s['type'] === 'unprepared');
+        $unprepared = array_filter($result->rawSql, fn($s) => $s['type'] === 'unprepared');
         $this->assertNotEmpty($unprepared);
     }
 
@@ -308,7 +318,7 @@ class MigrationAnalyzerTest extends TestCase
     {
         $result = $this->analyzeFixture('2024_06_01_100000_raw_sql_migration.php');
 
-        $heredocs = array_filter($result['raw_sql'], fn($s) => $s['type'] === 'heredoc');
+        $heredocs = array_filter($result->rawSql, fn($s) => $s['type'] === 'heredoc');
         $this->assertNotEmpty($heredocs);
     }
 
@@ -318,27 +328,27 @@ class MigrationAnalyzerTest extends TestCase
     {
         $result = $this->analyzeFixture('2024_01_15_100000_create_users_table.php');
 
-        $this->assertArrayHasKey('name', $result['columns']);
-        $this->assertSame('string', $result['columns']['name']['type']);
+        $this->assertArrayHasKey('name', $result->columns);
+        $this->assertSame('string', $result->columns['name']['type']);
 
-        $this->assertArrayHasKey('email', $result['columns']);
-        $this->assertSame('string', $result['columns']['email']['type']);
+        $this->assertArrayHasKey('email', $result->columns);
+        $this->assertSame('string', $result->columns['email']['type']);
 
-        $this->assertArrayHasKey('is_active', $result['columns']);
-        $this->assertSame('boolean', $result['columns']['is_active']['type']);
+        $this->assertArrayHasKey('is_active', $result->columns);
+        $this->assertSame('boolean', $result->columns['is_active']['type']);
     }
 
     public function testExtractsColumnModifiers(): void
     {
         $result = $this->analyzeFixture('2024_02_20_100000_alter_users_add_avatar.php');
 
-        $this->assertArrayHasKey('avatar', $result['columns']);
-        $this->assertSame('string', $result['columns']['avatar']['type']);
+        $this->assertArrayHasKey('avatar', $result->columns);
+        $this->assertSame('string', $result->columns['avatar']['type']);
 
-        $this->assertArrayHasKey('bio', $result['columns']);
-        $this->assertSame('text', $result['columns']['bio']['type']);
+        $this->assertArrayHasKey('bio', $result->columns);
+        $this->assertSame('text', $result->columns['bio']['type']);
 
-        $this->assertNotEmpty($result['methods_used']);
+        $this->assertNotEmpty($result->methodsUsed);
     }
 
     // ── Complexity ──────────────────────────────────────────────────
@@ -347,15 +357,15 @@ class MigrationAnalyzerTest extends TestCase
     {
         $result = $this->analyzeFixture('2024_08_01_100000_empty_migration.php');
 
-        $this->assertSame(1, $result['complexity']);
+        $this->assertSame(1, $result->complexity);
     }
 
     public function testComplexityCapAtTen(): void
     {
         $result = $this->analyzeFixture('2024_07_01_100000_complex_migration.php');
 
-        $this->assertLessThanOrEqual(10, $result['complexity']);
-        $this->assertGreaterThanOrEqual(1, $result['complexity']);
+        $this->assertLessThanOrEqual(10, $result->complexity);
+        $this->assertGreaterThanOrEqual(1, $result->complexity);
     }
 
     public function testComplexityScoringFormula(): void
@@ -377,11 +387,11 @@ class MigrationAnalyzerTest extends TestCase
             'default'
         );
 
-        $this->assertSame(1, $afterComplex['complexity'],
+        $this->assertSame(1, $afterComplex->complexity,
             'BUG FIXED: Empty migration always gets complexity 1 regardless of call order.'
         );
 
-        $this->assertGreaterThan($simple['complexity'], $complex['complexity'],
+        $this->assertGreaterThan($simple->complexity, $complex->complexity,
             'Complex migration should have higher complexity than simple one.'
         );
     }
@@ -402,8 +412,8 @@ class MigrationAnalyzerTest extends TestCase
 
         $result = $this->analyzeContent($content);
 
-        $this->assertArrayHasKey('safe_table', $result['tables']);
-        $this->assertSame('CREATE', $result['tables']['safe_table']['operation']);
+        $this->assertArrayHasKey('safe_table', $result->tables);
+        $this->assertSame('CREATE', $result->tables['safe_table']['operation']);
     }
 
     public function testHandlesEmptyContent(): void
@@ -411,11 +421,11 @@ class MigrationAnalyzerTest extends TestCase
         $content = "<?php\n";
         $result = $this->analyzeContent($content);
 
-        $this->assertEmpty($result['tables']);
-        $this->assertEmpty($result['ddl_operations']);
-        $this->assertEmpty($result['dml_operations']);
-        $this->assertEmpty($result['raw_sql']);
-        $this->assertSame(1, $result['complexity']);
+        $this->assertEmpty($result->tables);
+        $this->assertEmpty($result->ddlOperations);
+        $this->assertEmpty($result->dmlOperations);
+        $this->assertEmpty($result->rawSql);
+        $this->assertSame(1, $result->complexity);
     }
 
     public function testHandlesSpecialCharsInTableNames(): void
@@ -432,32 +442,32 @@ class MigrationAnalyzerTest extends TestCase
 
         $result = $this->analyzeContent($content);
 
-        $this->assertArrayHasKey('user-logs', $result['tables']);
-        $this->assertArrayHasKey('app_v2_settings', $result['tables']);
+        $this->assertArrayHasKey('user-logs', $result->tables);
+        $this->assertArrayHasKey('app_v2_settings', $result->tables);
     }
 
     public function testHasDataModificationsAllConditions(): void
     {
         $withDml = $this->analyzeFixture('2024_05_15_100000_data_migration.php');
-        $this->assertTrue($withDml['has_data_modifications']);
+        $this->assertTrue($withDml->hasDataModifications);
 
         $withRawSql = $this->analyzeFixture('2024_06_01_100000_raw_sql_migration.php');
-        $this->assertTrue($withRawSql['has_data_modifications']);
+        $this->assertTrue($withRawSql->hasDataModifications);
 
         $content = "<?php\nDB::table('users')->get();\n";
         $withDbTable = $this->analyzeContent($content);
-        $this->assertTrue($withDbTable['has_data_modifications']);
+        $this->assertTrue($withDbTable->hasDataModifications);
 
         $content = "<?php\n\App\Models\User::create(['name' => 'test']);\n";
         $withCreate = $this->analyzeContent($content);
-        $this->assertTrue($withCreate['has_data_modifications']);
+        $this->assertTrue($withCreate->hasDataModifications);
 
         $content = "<?php\n\App\Models\User::update(['name' => 'test']);\n";
         $withUpdate = $this->analyzeContent($content);
-        $this->assertTrue($withUpdate['has_data_modifications']);
+        $this->assertTrue($withUpdate->hasDataModifications);
 
         $noData = $this->analyzeFixture('2024_08_01_100000_empty_migration.php');
-        $this->assertFalse($noData['has_data_modifications']);
+        $this->assertFalse($noData->hasDataModifications);
     }
 
     // ── Foreign Keys ────────────────────────────────────────────────
@@ -466,9 +476,9 @@ class MigrationAnalyzerTest extends TestCase
     {
         $result = $this->analyzeFixture('2024_01_15_100000_create_users_table.php');
 
-        $this->assertNotEmpty($result['foreign_keys']);
+        $this->assertNotEmpty($result->foreignKeys);
 
-        $fk = collect($result['foreign_keys'])->firstWhere('column', 'department_id');
+        $fk = collect($result->foreignKeys)->firstWhere('column', 'department_id');
         $this->assertNotNull($fk);
         $this->assertSame('id', $fk['references']);
         $this->assertSame('departments', $fk['on_table']);
@@ -479,6 +489,7 @@ class MigrationAnalyzerTest extends TestCase
     public function testAnalyzeReturnsAllRequiredKeys(): void
     {
         $result = $this->analyzeFixture('2024_01_15_100000_create_users_table.php');
+        $array = $result->toArray();
 
         $requiredKeys = [
             'filename', 'filepath', 'relative_path', 'type', 'timestamp',
@@ -488,7 +499,7 @@ class MigrationAnalyzerTest extends TestCase
         ];
 
         foreach ($requiredKeys as $key) {
-            $this->assertArrayHasKey($key, $result, "Missing key: {$key}");
+            $this->assertArrayHasKey($key, $array, "Missing key: {$key}");
         }
     }
 
@@ -497,7 +508,7 @@ class MigrationAnalyzerTest extends TestCase
         $filepath = $this->getFixturePath('2024_08_01_100000_empty_migration.php');
         $result = $this->analyzer->analyze($filepath, 'custom_type');
 
-        $this->assertSame('custom_type', $result['type']);
+        $this->assertSame('custom_type', $result->type);
     }
 
     // ── extractWhereConditions ──────────────────────────────────────
@@ -511,7 +522,7 @@ class MigrationAnalyzerTest extends TestCase
 
         $result = $this->analyzeContent($content);
 
-        $updates = array_filter($result['dml_operations'], fn($op) => $op['type'] === 'UPDATE');
+        $updates = array_filter($result->dmlOperations, fn($op) => $op['type'] === 'UPDATE');
         $update = array_values($updates)[0];
         $this->assertContains('status IN (...)', $update['where_conditions']);
     }
@@ -525,7 +536,7 @@ class MigrationAnalyzerTest extends TestCase
 
         $result = $this->analyzeContent($content);
 
-        $updates = array_filter($result['dml_operations'], fn($op) => $op['type'] === 'UPDATE');
+        $updates = array_filter($result->dmlOperations, fn($op) => $op['type'] === 'UPDATE');
         $update = array_values($updates)[0];
         $this->assertContains('role NOT IN (...)', $update['where_conditions']);
     }
@@ -539,7 +550,7 @@ class MigrationAnalyzerTest extends TestCase
 
         $result = $this->analyzeContent($content);
 
-        $updates = array_filter($result['dml_operations'], fn($op) => $op['type'] === 'UPDATE');
+        $updates = array_filter($result->dmlOperations, fn($op) => $op['type'] === 'UPDATE');
         $update = array_values($updates)[0];
         $this->assertContains('deleted_at IS NULL', $update['where_conditions']);
     }
@@ -553,7 +564,7 @@ class MigrationAnalyzerTest extends TestCase
 
         $result = $this->analyzeContent($content);
 
-        $updates = array_filter($result['dml_operations'], fn($op) => $op['type'] === 'UPDATE');
+        $updates = array_filter($result->dmlOperations, fn($op) => $op['type'] === 'UPDATE');
         $update = array_values($updates)[0];
         $this->assertContains('email_verified_at IS NOT NULL', $update['where_conditions']);
     }
@@ -567,7 +578,7 @@ class MigrationAnalyzerTest extends TestCase
 
         $result = $this->analyzeContent($content);
 
-        $updates = array_filter($result['dml_operations'], fn($op) => $op['type'] === 'UPDATE');
+        $updates = array_filter($result->dmlOperations, fn($op) => $op['type'] === 'UPDATE');
         $update = array_values($updates)[0];
         $this->assertContains('created_at BETWEEN (...)', $update['where_conditions']);
     }
@@ -581,7 +592,7 @@ class MigrationAnalyzerTest extends TestCase
 
         $result = $this->analyzeContent($content);
 
-        $updates = array_filter($result['dml_operations'], fn($op) => $op['type'] === 'UPDATE');
+        $updates = array_filter($result->dmlOperations, fn($op) => $op['type'] === 'UPDATE');
         $update = array_values($updates)[0];
         $this->assertContains('HAS posts', $update['where_conditions']);
     }
@@ -595,7 +606,7 @@ class MigrationAnalyzerTest extends TestCase
 
         $result = $this->analyzeContent($content);
 
-        $updates = array_filter($result['dml_operations'], fn($op) => $op['type'] === 'UPDATE');
+        $updates = array_filter($result->dmlOperations, fn($op) => $op['type'] === 'UPDATE');
         $update = array_values($updates)[0];
         $this->assertContains("DOESN'T HAVE orders", $update['where_conditions']);
     }
@@ -609,7 +620,7 @@ class MigrationAnalyzerTest extends TestCase
 
         $result = $this->analyzeContent($content);
 
-        $updates = array_filter($result['dml_operations'], fn($op) => $op['type'] === 'UPDATE');
+        $updates = array_filter($result->dmlOperations, fn($op) => $op['type'] === 'UPDATE');
         $update = array_values($updates)[0];
         $this->assertContains('OR banned = true', $update['where_conditions']);
     }
@@ -623,7 +634,7 @@ class MigrationAnalyzerTest extends TestCase
 
         $result = $this->analyzeContent($content);
 
-        $updates = array_filter($result['dml_operations'], fn($op) => $op['type'] === 'UPDATE');
+        $updates = array_filter($result->dmlOperations, fn($op) => $op['type'] === 'UPDATE');
         $update = array_values($updates)[0];
         $this->assertContains('OR age < 5', $update['where_conditions']);
     }
@@ -635,7 +646,7 @@ class MigrationAnalyzerTest extends TestCase
 
         $result = $this->analyzeContent($content);
 
-        $updates = array_filter($result['dml_operations'], fn($op) => $op['type'] === 'UPDATE');
+        $updates = array_filter($result->dmlOperations, fn($op) => $op['type'] === 'UPDATE');
         $update = array_values($updates)[0];
         $orConditions = array_filter($update['where_conditions'], fn($c) => str_starts_with($c, 'OR '));
         $orCondition = array_values($orConditions)[0];
@@ -652,7 +663,7 @@ class MigrationAnalyzerTest extends TestCase
 
         $result = $this->analyzeContent($content);
 
-        $updates = array_filter($result['dml_operations'], fn($op) => $op['type'] === 'UPDATE');
+        $updates = array_filter($result->dmlOperations, fn($op) => $op['type'] === 'UPDATE');
         $update = array_values($updates)[0];
         $condition = $update['where_conditions'][0];
         $this->assertStringContainsString('...', $condition);
@@ -673,8 +684,8 @@ class MigrationAnalyzerTest extends TestCase
 
         $result = $this->analyzeContent($content);
 
-        $this->assertArrayHasKey('requires', $result['dependencies']);
-        $this->assertContains('create_users_table', $result['dependencies']['requires']);
+        $this->assertArrayHasKey('requires', $result->dependencies);
+        $this->assertContains('create_users_table', $result->dependencies['requires']);
     }
 
     public function testExtractsDependsOnAnnotation(): void
@@ -689,8 +700,8 @@ class MigrationAnalyzerTest extends TestCase
 
         $result = $this->analyzeContent($content);
 
-        $this->assertArrayHasKey('depends_on', $result['dependencies']);
-        $this->assertContains('create_roles_table', $result['dependencies']['depends_on']);
+        $this->assertArrayHasKey('depends_on', $result->dependencies);
+        $this->assertContains('create_roles_table', $result->dependencies['depends_on']);
     }
 
     // ── extractIndexes ──────────────────────────────────────────────
@@ -706,7 +717,7 @@ class MigrationAnalyzerTest extends TestCase
 
         $result = $this->analyzeContent($content);
 
-        $uniqueIndexes = array_filter($result['indexes'], fn($idx) => $idx['type'] === 'unique');
+        $uniqueIndexes = array_filter($result->indexes, fn($idx) => $idx['type'] === 'unique');
         $this->assertNotEmpty($uniqueIndexes);
     }
 
@@ -724,7 +735,7 @@ class MigrationAnalyzerTest extends TestCase
 
         $result = $this->analyzeContent($content);
 
-        $loops = array_filter($result['dml_operations'], fn($op) => $op['type'] === 'LOOP');
+        $loops = array_filter($result->dmlOperations, fn($op) => $op['type'] === 'LOOP');
         $this->assertNotEmpty($loops);
 
         $loop = array_values($loops)[0];
@@ -738,7 +749,7 @@ class MigrationAnalyzerTest extends TestCase
     {
         $content = "<?php\n\App\Models\User::insert(['name' => 'test']);\n";
         $result = $this->analyzeContent($content);
-        $this->assertTrue($result['has_data_modifications']);
+        $this->assertTrue($result->hasDataModifications);
     }
 
     // ── File Size Limit ────────────────────────────────────────────
@@ -768,7 +779,33 @@ class MigrationAnalyzerTest extends TestCase
         $this->app['config']->set('migration-searcher.max_file_size', 5242880);
 
         $result = $this->analyzeFixture('2024_08_01_100000_empty_migration.php');
-        $this->assertIsArray($result);
-        $this->assertArrayHasKey('filename', $result);
+        $this->assertInstanceOf(MigrationAnalysisResult::class, $result);
+        $this->assertSame('2024_08_01_100000_empty_migration.php', $result->filename);
+    }
+
+    // ── toArray compatibility ───────────────────────────────────────
+
+    public function testToArrayProducesSameKeysAsOldArrayFormat(): void
+    {
+        $result = $this->analyzeFixture('2024_01_15_100000_create_users_table.php');
+        $array = $result->toArray();
+
+        $this->assertIsString($array['filename']);
+        $this->assertIsString($array['filepath']);
+        $this->assertIsString($array['relative_path']);
+        $this->assertIsString($array['type']);
+        $this->assertIsString($array['timestamp']);
+        $this->assertIsString($array['name']);
+        $this->assertIsArray($array['tables']);
+        $this->assertIsArray($array['ddl_operations']);
+        $this->assertIsArray($array['dml_operations']);
+        $this->assertIsArray($array['raw_sql']);
+        $this->assertIsArray($array['dependencies']);
+        $this->assertIsArray($array['columns']);
+        $this->assertIsArray($array['indexes']);
+        $this->assertIsArray($array['foreign_keys']);
+        $this->assertIsArray($array['methods_used']);
+        $this->assertIsBool($array['has_data_modifications']);
+        $this->assertIsInt($array['complexity']);
     }
 }

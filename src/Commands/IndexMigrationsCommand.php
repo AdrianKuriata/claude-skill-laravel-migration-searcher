@@ -219,7 +219,7 @@ class IndexMigrationsCommand extends Command
 
             try {
                 $migrationData = $this->analyzer->analyze($file->getPathname(), $type);
-                $migrations[] = $migrationData;
+                $migrations[] = $migrationData->toArray();
             } catch (\Exception $e) {
                 $this->newLine();
                 $this->error("   Error analyzing {$file->getFilename()}: " . $e->getMessage());

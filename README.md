@@ -264,6 +264,9 @@ The package follows SOLID principles with a clean separation of concerns:
 
 ```
 src/
+├── DTOs/
+│   ├── BaseDTO.php                    # Abstract base with Arrayable + reflection toArray()
+│   └── MigrationAnalysisResult.php    # Typed immutable analysis output
 ├── Contracts/                          # Interfaces
 │   ├── MigrationAnalyzerInterface.php
 │   ├── IndexGeneratorInterface.php
@@ -295,7 +298,7 @@ src/
 └── MigrationSearcherServiceProvider.php  # Registers interface bindings
 ```
 
-Data flows through a clean pipeline: raw migrations → `IndexDataBuilder` (sort, group, stats) → `RendererInterface` (format to markdown/JSON) → file output. Adding a new format requires only a new class implementing `RendererInterface`.
+Data flows through a clean pipeline: raw migrations → `MigrationAnalyzer` (returns `MigrationAnalysisResult` DTO) → `toArray()` → `IndexDataBuilder` (sort, group, stats) → `RendererInterface` (format to markdown/JSON) → file output. Adding a new format requires only a new class implementing `RendererInterface`.
 
 All interfaces are bound in the service provider, making it easy to swap implementations or mock in tests.
 

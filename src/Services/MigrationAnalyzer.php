@@ -3,6 +3,7 @@
 namespace DevSite\LaravelMigrationSearcher\Services;
 
 use DevSite\LaravelMigrationSearcher\Contracts\MigrationAnalyzerInterface;
+use DevSite\LaravelMigrationSearcher\DTOs\MigrationAnalysisResult;
 use DevSite\LaravelMigrationSearcher\Services\Parsers\DdlParser;
 use DevSite\LaravelMigrationSearcher\Services\Parsers\DependencyParser;
 use DevSite\LaravelMigrationSearcher\Services\Parsers\DmlParser;
@@ -24,7 +25,7 @@ class MigrationAnalyzer implements MigrationAnalyzerInterface
     ) {
     }
 
-    public function analyze(string $filepath, string $type): array
+    public function analyze(string $filepath, string $type): MigrationAnalysisResult
     {
         $maxFileSize = config('migration-searcher.max_file_size', 5242880);
         $fileSize = File::size($filepath);
@@ -38,27 +39,36 @@ class MigrationAnalyzer implements MigrationAnalyzerInterface
         $filename = basename($filepath);
         $content = File::get($filepath);
 
-        $result = [
-            'filename' => $filename,
-            'filepath' => $filepath,
-            'relative_path' => $this->fileNameParser->getRelativePath($filepath),
-            'type' => $type,
-            'timestamp' => $this->fileNameParser->extractTimestamp($filename),
-            'name' => $this->fileNameParser->extractMigrationName($filename),
-            'tables' => $this->tableDetector->parse($content),
-            'ddl_operations' => $this->ddlParser->parse($content),
-            'dml_operations' => $this->dmlParser->parse($content),
-            'raw_sql' => $this->rawSqlParser->parse($content),
-            'dependencies' => $this->dependencyParser->parse($content),
-            'columns' => $this->ddlParser->extractColumns($content),
-            'indexes' => $this->ddlParser->extractIndexes($content),
-            'foreign_keys' => $this->ddlParser->extractForeignKeys($content),
-            'methods_used' => $this->ddlParser->extractMethodsUsed($content),
-            'has_data_modifications' => $this->dmlParser->hasDataModifications($content),
-        ];
+        $tables = $this->tableDetector->parse($content);
+        $ddlOperations = $this->ddlParser->parse($content);
+        $dmlOperations = $this->dmlParser->parse($content);
+        $rawSql = $this->rawSqlParser->parse($content);
+        $foreignKeys = $this->ddlParser->extractForeignKeys($content);
 
-        $result['complexity'] = $this->complexityCalculator->calculate($result);
-
-        return $result;
+        return new MigrationAnalysisResult(
+            $filename,
+            $filepath,
+            $this->fileNameParser->getRelativePath($filepath),
+            $type,
+            $this->fileNameParser->extractTimestamp($filename),
+            $this->fileNameParser->extractMigrationName($filename),
+            $tables,
+            $ddlOperations,
+            $dmlOperations,
+            $rawSql,
+            $this->dependencyParser->parse($content),
+            $this->ddlParser->extractColumns($content),
+            $this->ddlParser->extractIndexes($content),
+            $foreignKeys,
+            $this->ddlParser->extractMethodsUsed($content),
+            $this->dmlParser->hasDataModifications($content),
+            $this->complexityCalculator->calculate(
+                $tables,
+                $ddlOperations,
+                $dmlOperations,
+                $rawSql,
+                $foreignKeys,
+            ),
+        );
     }
 }
