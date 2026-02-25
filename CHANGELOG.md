@@ -2,6 +2,16 @@
 
 All notable changes to `claude-skill-laravel-migration-searcher` will be documented in this file.
 
+## [2.0.0] - 2026-02-25
+
+### Changed (BREAKING)
+- Moved Parsers from `Services\Parsers` to top-level `Parsers` namespace
+- Moved Renderers from `Services\Renderers` to top-level `Renderers` namespace
+- Moved Writers from `Services\Writers` to top-level `Writers` namespace
+- Moved IndexMigrationsCommand from `Commands` to `Console\Commands` namespace
+- Removed `Interface` suffix from all contracts (e.g., `MigrationAnalyzerInterface` → `MigrationAnalyzer`)
+- Restructured tests to mirror src/ directory structure
+
 ## [1.3.0] - 2026-02-25
 
 ### Added
@@ -64,14 +74,14 @@ All notable changes to `claude-skill-laravel-migration-searcher` will be documen
 
 ## Future Plans
 
-### [1.3.0] - Planned
+### [2.1.0] - Planned
 - Transaction detection (DB::transaction)
 - Seeder analysis
 - Rollback detection
 - Race condition warnings
 - Performance optimization for 5000+ migrations
 
-### [1.4.0] - Planned
+### [2.2.0] - Planned
 - Web UI for index browsing
 - Migration dependency graph visualization
 

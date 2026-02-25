@@ -2,7 +2,7 @@
 
 namespace Tests\Unit\Parsers;
 
-use DevSite\LaravelMigrationSearcher\Services\Parsers\DependencyParser;
+use DevSite\LaravelMigrationSearcher\Parsers\DependencyParser;
 use PHPUnit\Framework\TestCase;
 
 class DependencyParserTest extends TestCase

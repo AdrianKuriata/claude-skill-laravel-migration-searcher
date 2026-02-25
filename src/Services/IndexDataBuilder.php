@@ -2,11 +2,11 @@
 
 namespace DevSite\LaravelMigrationSearcher\Services;
 
-use DevSite\LaravelMigrationSearcher\Contracts\IndexDataBuilderInterface;
+use DevSite\LaravelMigrationSearcher\Contracts\IndexDataBuilder as IndexDataBuilderContract;
 
-class IndexDataBuilder implements IndexDataBuilderInterface
+class IndexDataBuilder implements IndexDataBuilderContract
 {
-    private const OPERATION_LABELS = [
+    private const array OPERATION_LABELS = [
         'CREATE' => 'Table Creation',
         'ALTER' => 'Structure Modifications',
         'DROP' => 'Table Deletion',

@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Unit;
+namespace Tests\Unit\DTOs;
 
 use DevSite\LaravelMigrationSearcher\DTOs\BaseDTO;
 use Illuminate\Contracts\Support\Arrayable;

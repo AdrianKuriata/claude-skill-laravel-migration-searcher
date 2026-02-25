@@ -1,10 +1,10 @@
 <?php
 
-namespace DevSite\LaravelMigrationSearcher\Services\Renderers;
+namespace DevSite\LaravelMigrationSearcher\Renderers;
 
-use DevSite\LaravelMigrationSearcher\Contracts\RendererInterface;
+use DevSite\LaravelMigrationSearcher\Contracts\Renderer;
 
-class JsonRenderer implements RendererInterface
+class JsonRenderer implements Renderer
 {
     public function getFileExtension(): string
     {

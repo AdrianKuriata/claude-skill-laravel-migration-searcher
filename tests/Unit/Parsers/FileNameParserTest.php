@@ -2,7 +2,7 @@
 
 namespace Tests\Unit\Parsers;
 
-use DevSite\LaravelMigrationSearcher\Services\Parsers\FileNameParser;
+use DevSite\LaravelMigrationSearcher\Parsers\FileNameParser;
 use Tests\TestCase;
 
 class FileNameParserTest extends TestCase

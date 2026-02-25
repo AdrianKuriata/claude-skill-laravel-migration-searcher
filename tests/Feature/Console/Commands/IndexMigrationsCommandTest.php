@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Feature;
+namespace Tests\Feature\Console\Commands;
 
 use Illuminate\Support\Facades\File;
 use Tests\TestCase;
@@ -19,7 +19,7 @@ class IndexMigrationsCommandTest extends TestCase
 
         mkdir($this->migrationPath, 0755, true);
 
-        $fixturesPath = __DIR__ . '/../fixtures/migrations';
+        $fixturesPath = __DIR__ . '/../../../fixtures/migrations';
         foreach (glob($fixturesPath . '/*.php') as $file) {
             copy($file, $this->migrationPath . '/' . basename($file));
         }
@@ -33,7 +33,7 @@ class IndexMigrationsCommandTest extends TestCase
                 'path' => $relativePath,
             ],
         ]);
-        $app['config']->set('migration-searcher.skill_template_path', __DIR__ . '/../../resources/skill-template/SKILL.md');
+        $app['config']->set('migration-searcher.skill_template_path', __DIR__ . '/../../../../resources/skill-template/SKILL.md');
     }
 
     protected function tearDown(): void

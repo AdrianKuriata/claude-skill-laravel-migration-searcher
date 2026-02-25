@@ -2,7 +2,7 @@
 
 namespace DevSite\LaravelMigrationSearcher\Contracts;
 
-interface ContentParserInterface
+interface ContentParser
 {
     public function parse(string $content): array;
 }

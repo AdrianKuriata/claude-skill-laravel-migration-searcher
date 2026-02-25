@@ -1,10 +1,10 @@
 <?php
 
-namespace DevSite\LaravelMigrationSearcher\Services\Parsers;
+namespace DevSite\LaravelMigrationSearcher\Parsers;
 
-use DevSite\LaravelMigrationSearcher\Contracts\ContentParserInterface;
+use DevSite\LaravelMigrationSearcher\Contracts\ContentParser;
 
-class DdlParser implements ContentParserInterface
+class DdlParser implements ContentParser
 {
     protected const array BLUEPRINT_METHODS = [
         'id', 'foreignId', 'bigIncrements', 'bigInteger', 'binary', 'boolean',

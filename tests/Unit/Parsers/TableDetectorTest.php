@@ -2,7 +2,7 @@
 
 namespace Tests\Unit\Parsers;
 
-use DevSite\LaravelMigrationSearcher\Services\Parsers\TableDetector;
+use DevSite\LaravelMigrationSearcher\Parsers\TableDetector;
 use PHPUnit\Framework\TestCase;
 
 class TableDetectorTest extends TestCase

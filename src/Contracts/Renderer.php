@@ -2,7 +2,7 @@
 
 namespace DevSite\LaravelMigrationSearcher\Contracts;
 
-interface RendererInterface
+interface Renderer
 {
     public function renderFullIndex(array $data): string;
 

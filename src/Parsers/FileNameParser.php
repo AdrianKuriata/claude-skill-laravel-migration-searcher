@@ -1,6 +1,6 @@
 <?php
 
-namespace DevSite\LaravelMigrationSearcher\Services\Parsers;
+namespace DevSite\LaravelMigrationSearcher\Parsers;
 
 class FileNameParser
 {

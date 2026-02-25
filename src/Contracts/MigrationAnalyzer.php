@@ -4,7 +4,7 @@ namespace DevSite\LaravelMigrationSearcher\Contracts;
 
 use DevSite\LaravelMigrationSearcher\DTOs\MigrationAnalysisResult;
 
-interface MigrationAnalyzerInterface
+interface MigrationAnalyzer
 {
     public function analyze(string $filepath, string $type): MigrationAnalysisResult;
 }

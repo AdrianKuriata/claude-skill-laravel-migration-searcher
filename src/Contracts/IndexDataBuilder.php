@@ -2,7 +2,7 @@
 
 namespace DevSite\LaravelMigrationSearcher\Contracts;
 
-interface IndexDataBuilderInterface
+interface IndexDataBuilder
 {
     public function buildFullIndex(array $migrations): array;
 

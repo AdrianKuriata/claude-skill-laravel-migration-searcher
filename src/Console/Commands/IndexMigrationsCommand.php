@@ -1,13 +1,13 @@
 <?php
 
-namespace DevSite\LaravelMigrationSearcher\Commands;
+namespace DevSite\LaravelMigrationSearcher\Console\Commands;
 
-use DevSite\LaravelMigrationSearcher\Contracts\IndexDataBuilderInterface;
-use DevSite\LaravelMigrationSearcher\Contracts\MigrationAnalyzerInterface;
-use DevSite\LaravelMigrationSearcher\Contracts\RendererInterface;
+use DevSite\LaravelMigrationSearcher\Contracts\IndexDataBuilder as IndexDataBuilderContract;
+use DevSite\LaravelMigrationSearcher\Contracts\MigrationAnalyzer as MigrationAnalyzerContract;
+use DevSite\LaravelMigrationSearcher\Contracts\Renderer;
 use DevSite\LaravelMigrationSearcher\Services\IndexGenerator;
-use DevSite\LaravelMigrationSearcher\Services\Renderers\JsonRenderer;
-use DevSite\LaravelMigrationSearcher\Services\Renderers\MarkdownRenderer;
+use DevSite\LaravelMigrationSearcher\Renderers\JsonRenderer;
+use DevSite\LaravelMigrationSearcher\Renderers\MarkdownRenderer;
 use DevSite\LaravelMigrationSearcher\Traits\FormatsFileSize;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
@@ -27,8 +27,8 @@ class IndexMigrationsCommand extends Command
     protected array $migrationTypes = [];
 
     public function __construct(
-        protected MigrationAnalyzerInterface $analyzer,
-        protected IndexDataBuilderInterface $dataBuilder,
+        protected MigrationAnalyzerContract $analyzer,
+        protected IndexDataBuilderContract $dataBuilder,
     ) {
         parent::__construct();
     }
@@ -89,7 +89,7 @@ class IndexMigrationsCommand extends Command
         return $outputPath;
     }
 
-    protected function resolveFormat(): ?RendererInterface
+    protected function resolveFormat(): ?Renderer
     {
         $format = $this->option('format')
             ?: config('migration-searcher.default_format', 'markdown');
@@ -139,7 +139,7 @@ class IndexMigrationsCommand extends Command
         return ['migrations' => $allMigrations, 'stats' => $stats];
     }
 
-    protected function generateIndexFiles(array $migrations, string $outputPath, RendererInterface $renderer): array
+    protected function generateIndexFiles(array $migrations, string $outputPath, Renderer $renderer): array
     {
         $this->info('📝 Generating index files...');
 
@@ -267,7 +267,7 @@ class IndexMigrationsCommand extends Command
         return ($isAbsolute ? '/' : '') . implode('/', $normalized);
     }
 
-    protected function resolveRenderer(string $format): ?RendererInterface
+    protected function resolveRenderer(string $format): ?Renderer
     {
         return match ($format) {
             'markdown' => new MarkdownRenderer(),

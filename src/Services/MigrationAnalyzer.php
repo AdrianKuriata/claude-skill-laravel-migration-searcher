@@ -2,17 +2,17 @@
 
 namespace DevSite\LaravelMigrationSearcher\Services;
 
-use DevSite\LaravelMigrationSearcher\Contracts\MigrationAnalyzerInterface;
+use DevSite\LaravelMigrationSearcher\Contracts\MigrationAnalyzer as MigrationAnalyzerContract;
 use DevSite\LaravelMigrationSearcher\DTOs\MigrationAnalysisResult;
-use DevSite\LaravelMigrationSearcher\Services\Parsers\DdlParser;
-use DevSite\LaravelMigrationSearcher\Services\Parsers\DependencyParser;
-use DevSite\LaravelMigrationSearcher\Services\Parsers\DmlParser;
-use DevSite\LaravelMigrationSearcher\Services\Parsers\FileNameParser;
-use DevSite\LaravelMigrationSearcher\Services\Parsers\RawSqlParser;
-use DevSite\LaravelMigrationSearcher\Services\Parsers\TableDetector;
+use DevSite\LaravelMigrationSearcher\Parsers\DdlParser;
+use DevSite\LaravelMigrationSearcher\Parsers\DependencyParser;
+use DevSite\LaravelMigrationSearcher\Parsers\DmlParser;
+use DevSite\LaravelMigrationSearcher\Parsers\FileNameParser;
+use DevSite\LaravelMigrationSearcher\Parsers\RawSqlParser;
+use DevSite\LaravelMigrationSearcher\Parsers\TableDetector;
 use Illuminate\Support\Facades\File;
 
-class MigrationAnalyzer implements MigrationAnalyzerInterface
+class MigrationAnalyzer implements MigrationAnalyzerContract
 {
     public function __construct(
         protected FileNameParser $fileNameParser = new FileNameParser(),

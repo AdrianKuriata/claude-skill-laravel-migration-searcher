@@ -2,7 +2,7 @@
 
 namespace DevSite\LaravelMigrationSearcher\Contracts;
 
-interface IndexGeneratorInterface
+interface IndexGenerator
 {
     public function setMigrations(array $migrations): void;
 

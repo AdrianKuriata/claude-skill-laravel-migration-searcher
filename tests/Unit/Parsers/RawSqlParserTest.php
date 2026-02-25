@@ -2,7 +2,7 @@
 
 namespace Tests\Unit\Parsers;
 
-use DevSite\LaravelMigrationSearcher\Services\Parsers\RawSqlParser;
+use DevSite\LaravelMigrationSearcher\Parsers\RawSqlParser;
 use PHPUnit\Framework\TestCase;
 
 class RawSqlParserTest extends TestCase

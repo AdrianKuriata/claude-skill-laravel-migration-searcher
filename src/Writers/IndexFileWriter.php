@@ -1,11 +1,11 @@
 <?php
 
-namespace DevSite\LaravelMigrationSearcher\Services\Writers;
+namespace DevSite\LaravelMigrationSearcher\Writers;
 
-use DevSite\LaravelMigrationSearcher\Contracts\FileWriterInterface;
+use DevSite\LaravelMigrationSearcher\Contracts\FileWriter;
 use Illuminate\Support\Facades\File;
 
-class IndexFileWriter implements FileWriterInterface
+class IndexFileWriter implements FileWriter
 {
     public function write(string $path, string $content): void
     {

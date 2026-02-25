@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Unit;
+namespace Tests\Unit\Services;
 
 use DevSite\LaravelMigrationSearcher\DTOs\MigrationAnalysisResult;
 use DevSite\LaravelMigrationSearcher\Services\MigrationAnalyzer;

@@ -2,26 +2,26 @@
 
 namespace DevSite\LaravelMigrationSearcher\Services;
 
-use DevSite\LaravelMigrationSearcher\Contracts\FileWriterInterface;
-use DevSite\LaravelMigrationSearcher\Contracts\IndexDataBuilderInterface;
-use DevSite\LaravelMigrationSearcher\Contracts\IndexGeneratorInterface;
-use DevSite\LaravelMigrationSearcher\Contracts\RendererInterface;
-use DevSite\LaravelMigrationSearcher\Services\Renderers\MarkdownRenderer;
-use DevSite\LaravelMigrationSearcher\Services\Writers\IndexFileWriter;
+use DevSite\LaravelMigrationSearcher\Contracts\FileWriter;
+use DevSite\LaravelMigrationSearcher\Contracts\IndexDataBuilder as IndexDataBuilderContract;
+use DevSite\LaravelMigrationSearcher\Contracts\IndexGenerator as IndexGeneratorContract;
+use DevSite\LaravelMigrationSearcher\Contracts\Renderer;
+use DevSite\LaravelMigrationSearcher\Renderers\MarkdownRenderer;
+use DevSite\LaravelMigrationSearcher\Writers\IndexFileWriter;
 
-class IndexGenerator implements IndexGeneratorInterface
+class IndexGenerator implements IndexGeneratorContract
 {
     protected array $migrations = [];
     protected string $outputPath;
-    protected RendererInterface $renderer;
-    protected IndexDataBuilderInterface $dataBuilder;
-    protected FileWriterInterface $writer;
+    protected Renderer $renderer;
+    protected IndexDataBuilderContract $dataBuilder;
+    protected FileWriter $writer;
 
     public function __construct(
         string $outputPath,
-        ?RendererInterface $renderer = null,
-        ?IndexDataBuilderInterface $dataBuilder = null,
-        ?FileWriterInterface $writer = null,
+        ?Renderer $renderer = null,
+        ?IndexDataBuilderContract $dataBuilder = null,
+        ?FileWriter $writer = null,
     ) {
         $this->outputPath = rtrim($outputPath, '/');
         $this->renderer = $renderer ?? new MarkdownRenderer();

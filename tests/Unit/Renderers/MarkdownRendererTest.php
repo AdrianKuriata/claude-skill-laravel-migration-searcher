@@ -3,7 +3,7 @@
 namespace Tests\Unit\Renderers;
 
 use DevSite\LaravelMigrationSearcher\Services\IndexDataBuilder;
-use DevSite\LaravelMigrationSearcher\Services\Renderers\MarkdownRenderer;
+use DevSite\LaravelMigrationSearcher\Renderers\MarkdownRenderer;
 use Tests\TestCase;
 
 class MarkdownRendererTest extends TestCase

@@ -1,10 +1,10 @@
 <?php
 
-namespace DevSite\LaravelMigrationSearcher\Services\Parsers;
+namespace DevSite\LaravelMigrationSearcher\Parsers;
 
-use DevSite\LaravelMigrationSearcher\Contracts\ContentParserInterface;
+use DevSite\LaravelMigrationSearcher\Contracts\ContentParser;
 
-class TableDetector implements ContentParserInterface
+class TableDetector implements ContentParser
 {
     public function parse(string $content): array
     {

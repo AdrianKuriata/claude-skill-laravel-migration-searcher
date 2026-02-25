@@ -2,7 +2,7 @@
 
 namespace DevSite\LaravelMigrationSearcher\Contracts;
 
-interface FileWriterInterface
+interface FileWriter
 {
     public function write(string $path, string $content): void;
 

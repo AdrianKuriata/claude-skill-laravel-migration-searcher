@@ -1,14 +1,14 @@
 <?php
 
-namespace Tests\Unit;
+namespace Tests\Unit\Services;
 
-use DevSite\LaravelMigrationSearcher\Contracts\IndexDataBuilderInterface;
+use DevSite\LaravelMigrationSearcher\Contracts\IndexDataBuilder as IndexDataBuilderContract;
 use DevSite\LaravelMigrationSearcher\Services\IndexDataBuilder;
 use Tests\TestCase;
 
 class IndexDataBuilderTest extends TestCase
 {
-    protected IndexDataBuilderInterface $builder;
+    protected IndexDataBuilderContract $builder;
 
     protected function setUp(): void
     {

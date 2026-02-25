@@ -3,7 +3,7 @@
 namespace Tests\Unit\Renderers;
 
 use DevSite\LaravelMigrationSearcher\Services\IndexDataBuilder;
-use DevSite\LaravelMigrationSearcher\Services\Renderers\JsonRenderer;
+use DevSite\LaravelMigrationSearcher\Renderers\JsonRenderer;
 use Tests\TestCase;
 
 class JsonRendererTest extends TestCase

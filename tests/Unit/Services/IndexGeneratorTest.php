@@ -1,12 +1,12 @@
 <?php
 
-namespace Tests\Unit;
+namespace Tests\Unit\Services;
 
-use DevSite\LaravelMigrationSearcher\Contracts\RendererInterface;
+use DevSite\LaravelMigrationSearcher\Contracts\Renderer;
 use DevSite\LaravelMigrationSearcher\Services\IndexDataBuilder;
 use DevSite\LaravelMigrationSearcher\Services\IndexGenerator;
-use DevSite\LaravelMigrationSearcher\Services\Renderers\JsonRenderer;
-use DevSite\LaravelMigrationSearcher\Services\Renderers\MarkdownRenderer;
+use DevSite\LaravelMigrationSearcher\Renderers\JsonRenderer;
+use DevSite\LaravelMigrationSearcher\Renderers\MarkdownRenderer;
 use Illuminate\Support\Facades\File;
 use Tests\TestCase;
 
@@ -759,9 +759,9 @@ class IndexGeneratorTest extends TestCase
         $this->assertNotNull($decoded);
     }
 
-    public function testAcceptsRendererInterface(): void
+    public function testAcceptsRenderer(): void
     {
-        $mockRenderer = $this->createMock(RendererInterface::class);
+        $mockRenderer = $this->createMock(Renderer::class);
         $mockRenderer->method('getFileExtension')->willReturn('xml');
         $mockRenderer->method('renderFullIndex')->willReturn('<xml/>');
         $mockRenderer->method('renderByTypeIndex')->willReturn('<xml/>');

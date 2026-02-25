@@ -264,43 +264,44 @@ The package follows SOLID principles with a clean separation of concerns:
 
 ```
 src/
+├── Console/
+│   └── Commands/
+│       └── IndexMigrationsCommand.php    # Constructor injection via DI
+├── Contracts/                             # Interfaces (no Interface suffix)
+│   ├── ContentParser.php
+│   ├── FileWriter.php
+│   ├── IndexDataBuilder.php              # Data preparation contract
+│   ├── IndexGenerator.php
+│   ├── MigrationAnalyzer.php
+│   └── Renderer.php                      # Output format contract
 ├── DTOs/
-│   ├── BaseDTO.php                    # Abstract base with Arrayable + reflection toArray()
-│   └── MigrationAnalysisResult.php    # Typed immutable analysis output
-├── Contracts/                          # Interfaces
-│   ├── MigrationAnalyzerInterface.php
-│   ├── IndexGeneratorInterface.php
-│   ├── IndexDataBuilderInterface.php   # Data preparation contract
-│   ├── RendererInterface.php           # Output format contract
-│   ├── FileWriterInterface.php
-│   └── ContentParserInterface.php
+│   ├── BaseDTO.php                       # Abstract base with Arrayable + reflection toArray()
+│   └── MigrationAnalysisResult.php       # Typed immutable analysis output
+├── Parsers/
+│   ├── DdlParser.php                     # Columns, indexes, foreign keys, DDL ops
+│   ├── DependencyParser.php              # @requires, @depends_on, FK dependencies
+│   ├── DmlParser.php                     # INSERT/UPDATE/DELETE, Eloquent, loops
+│   ├── FileNameParser.php                # Timestamp, name, relative path
+│   ├── RawSqlParser.php                  # DB::statement, unprepared, raw, heredoc
+│   └── TableDetector.php                 # Schema::create/table/drop/rename, DB::table
+├── Renderers/
+│   ├── JsonRenderer.php                  # Formats structured data as JSON
+│   └── MarkdownRenderer.php              # Formats structured data as markdown
 ├── Services/
-│   ├── MigrationAnalyzer.php           # Orchestrates parsers
-│   ├── ComplexityCalculator.php        # Pure function: calculates 1-10 score
-│   ├── IndexDataBuilder.php           # Sorts, groups, calculates stats
-│   ├── IndexGenerator.php             # Orchestrates data builder + renderer + writer
-│   ├── Parsers/
-│   │   ├── FileNameParser.php         # Timestamp, name, relative path
-│   │   ├── TableDetector.php          # Schema::create/table/drop/rename, DB::table
-│   │   ├── DdlParser.php             # Columns, indexes, foreign keys, DDL ops
-│   │   ├── DmlParser.php             # INSERT/UPDATE/DELETE, Eloquent, loops
-│   │   ├── RawSqlParser.php          # DB::statement, unprepared, raw, heredoc
-│   │   └── DependencyParser.php      # @requires, @depends_on, FK dependencies
-│   ├── Renderers/
-│   │   ├── MarkdownRenderer.php      # Formats structured data as markdown
-│   │   └── JsonRenderer.php          # Formats structured data as JSON
-│   └── Writers/
-│       └── IndexFileWriter.php       # File I/O (implements FileWriterInterface)
-├── Commands/
-│   └── IndexMigrationsCommand.php    # Constructor injection via DI
+│   ├── ComplexityCalculator.php          # Pure function: calculates 1-10 score
+│   ├── IndexDataBuilder.php              # Sorts, groups, calculates stats
+│   ├── IndexGenerator.php                # Orchestrates data builder + renderer + writer
+│   └── MigrationAnalyzer.php             # Orchestrates parsers
 ├── Traits/
 │   └── FormatsFileSize.php
+├── Writers/
+│   └── IndexFileWriter.php              # File I/O (implements FileWriter)
 └── MigrationSearcherServiceProvider.php  # Registers interface bindings
 ```
 
-Data flows through a clean pipeline: raw migrations → `MigrationAnalyzer` (returns `MigrationAnalysisResult` DTO) → `toArray()` → `IndexDataBuilder` (sort, group, stats) → `RendererInterface` (format to markdown/JSON) → file output. Adding a new format requires only a new class implementing `RendererInterface`.
+Data flows through a clean pipeline: raw migrations → `MigrationAnalyzer` (returns `MigrationAnalysisResult` DTO) → `toArray()` → `IndexDataBuilder` (sort, group, stats) → `Renderer` (format to markdown/JSON) → file output. Adding a new format requires only a new class implementing `Renderer`.
 
-All interfaces are bound in the service provider, making it easy to swap implementations or mock in tests.
+All contracts are bound in the service provider, making it easy to swap implementations or mock in tests.
 
 ## Requirements
 

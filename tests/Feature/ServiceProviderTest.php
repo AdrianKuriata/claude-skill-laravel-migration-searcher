@@ -2,18 +2,18 @@
 
 namespace Tests\Feature;
 
-use DevSite\LaravelMigrationSearcher\Commands\IndexMigrationsCommand;
-use DevSite\LaravelMigrationSearcher\Contracts\FileWriterInterface;
-use DevSite\LaravelMigrationSearcher\Contracts\IndexDataBuilderInterface;
-use DevSite\LaravelMigrationSearcher\Contracts\IndexGeneratorInterface;
-use DevSite\LaravelMigrationSearcher\Contracts\MigrationAnalyzerInterface;
-use DevSite\LaravelMigrationSearcher\Contracts\RendererInterface;
+use DevSite\LaravelMigrationSearcher\Console\Commands\IndexMigrationsCommand;
+use DevSite\LaravelMigrationSearcher\Contracts\FileWriter;
+use DevSite\LaravelMigrationSearcher\Contracts\IndexDataBuilder as IndexDataBuilderContract;
+use DevSite\LaravelMigrationSearcher\Contracts\IndexGenerator as IndexGeneratorContract;
+use DevSite\LaravelMigrationSearcher\Contracts\MigrationAnalyzer as MigrationAnalyzerContract;
+use DevSite\LaravelMigrationSearcher\Contracts\Renderer;
+use DevSite\LaravelMigrationSearcher\Renderers\JsonRenderer;
+use DevSite\LaravelMigrationSearcher\Renderers\MarkdownRenderer;
 use DevSite\LaravelMigrationSearcher\Services\IndexDataBuilder;
 use DevSite\LaravelMigrationSearcher\Services\IndexGenerator;
 use DevSite\LaravelMigrationSearcher\Services\MigrationAnalyzer;
-use DevSite\LaravelMigrationSearcher\Services\Renderers\JsonRenderer;
-use DevSite\LaravelMigrationSearcher\Services\Renderers\MarkdownRenderer;
-use DevSite\LaravelMigrationSearcher\Services\Writers\IndexFileWriter;
+use DevSite\LaravelMigrationSearcher\Writers\IndexFileWriter;
 use Tests\TestCase;
 
 class ServiceProviderTest extends TestCase
@@ -42,41 +42,41 @@ class ServiceProviderTest extends TestCase
         $this->assertInstanceOf(IndexMigrationsCommand::class, $commands['migrations:index']);
     }
 
-    public function testBindsMigrationAnalyzerInterface(): void
+    public function testBindsMigrationAnalyzerContract(): void
     {
-        $instance = $this->app->make(MigrationAnalyzerInterface::class);
+        $instance = $this->app->make(MigrationAnalyzerContract::class);
         $this->assertInstanceOf(MigrationAnalyzer::class, $instance);
     }
 
-    public function testBindsFileWriterInterface(): void
+    public function testBindsFileWriter(): void
     {
-        $instance = $this->app->make(FileWriterInterface::class);
+        $instance = $this->app->make(FileWriter::class);
         $this->assertInstanceOf(IndexFileWriter::class, $instance);
     }
 
-    public function testBindsIndexGeneratorInterface(): void
+    public function testBindsIndexGeneratorContract(): void
     {
-        $instance = $this->app->make(IndexGeneratorInterface::class);
+        $instance = $this->app->make(IndexGeneratorContract::class);
         $this->assertInstanceOf(IndexGenerator::class, $instance);
     }
 
-    public function testBindsIndexDataBuilderInterface(): void
+    public function testBindsIndexDataBuilderContract(): void
     {
-        $instance = $this->app->make(IndexDataBuilderInterface::class);
+        $instance = $this->app->make(IndexDataBuilderContract::class);
         $this->assertInstanceOf(IndexDataBuilder::class, $instance);
     }
 
-    public function testBindsRendererInterface(): void
+    public function testBindsRenderer(): void
     {
-        $instance = $this->app->make(RendererInterface::class);
+        $instance = $this->app->make(Renderer::class);
         $this->assertInstanceOf(MarkdownRenderer::class, $instance);
     }
 
-    public function testBindsRendererInterfaceRespectsConfig(): void
+    public function testBindsRendererRespectsConfig(): void
     {
         $this->app['config']->set('migration-searcher.default_format', 'json');
 
-        $instance = $this->app->make(RendererInterface::class);
+        $instance = $this->app->make(Renderer::class);
         $this->assertInstanceOf(JsonRenderer::class, $instance);
     }
 }

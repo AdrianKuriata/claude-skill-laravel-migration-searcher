@@ -2,7 +2,7 @@
 
 namespace Tests\Unit\Parsers;
 
-use DevSite\LaravelMigrationSearcher\Services\Parsers\DmlParser;
+use DevSite\LaravelMigrationSearcher\Parsers\DmlParser;
 use PHPUnit\Framework\TestCase;
 
 class DmlParserTest extends TestCase

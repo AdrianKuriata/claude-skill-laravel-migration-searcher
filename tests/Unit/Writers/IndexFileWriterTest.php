@@ -2,7 +2,7 @@
 
 namespace Tests\Unit\Writers;
 
-use DevSite\LaravelMigrationSearcher\Services\Writers\IndexFileWriter;
+use DevSite\LaravelMigrationSearcher\Writers\IndexFileWriter;
 use Illuminate\Support\Facades\File;
 use Tests\TestCase;
 
