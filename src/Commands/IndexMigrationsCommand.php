@@ -28,31 +28,69 @@ class IndexMigrationsCommand extends Command
 
     public function __construct(
         protected MigrationAnalyzerInterface $analyzer,
+        protected IndexDataBuilderInterface $dataBuilder,
     ) {
         parent::__construct();
     }
 
-    public function handle()
+    public function handle(): int
     {
         $this->info('🔍 Starting Laravel migration indexing...');
         $this->newLine();
 
         $startTime = microtime(true);
-
         $this->migrationTypes = config('migration-searcher.migration_types', [
-            'default' => [
-                'path' => 'database/migrations',
-            ],
+            'default' => ['path' => 'database/migrations'],
         ]);
 
+        $outputPath = $this->resolveOutputPath();
+        if ($outputPath === null) {
+            return Command::FAILURE;
+        }
+
+        $renderer = $this->resolveFormat();
+        if ($renderer === null) {
+            return Command::FAILURE;
+        }
+
+        $this->prepareOutputDirectory($outputPath);
+
+        $typesToIndex = $this->determineTypesToIndex();
+        if ($typesToIndex === null) {
+            return Command::FAILURE;
+        }
+
+        $result = $this->collectMigrations($typesToIndex);
+        $generated = $this->generateIndexFiles($result['migrations'], $outputPath, $renderer);
+
+        $this->displayGeneratedFiles($generated);
+        $this->copySkillTemplate($outputPath);
+
+        $duration = round(microtime(true) - $startTime, 2);
+        $this->newLine();
+        $this->info("⏱️  Execution time: {$duration}s");
+        $this->newLine();
+
+        $this->displaySummary($result['stats'], $outputPath);
+
+        return Command::SUCCESS;
+    }
+
+    protected function resolveOutputPath(): ?string
+    {
         $outputPath = $this->option('output')
             ?: base_path(config('migration-searcher.output_path', '.claude/skills/laravel-migration-searcher'));
 
         if (!$this->isPathWithinBase($outputPath)) {
             $this->error('Output path must be within the project root directory.');
-            return Command::FAILURE;
+            return null;
         }
 
+        return $outputPath;
+    }
+
+    protected function resolveFormat(): ?RendererInterface
+    {
         $format = $this->option('format')
             ?: config('migration-searcher.default_format', 'markdown');
 
@@ -60,9 +98,14 @@ class IndexMigrationsCommand extends Command
 
         if ($renderer === null) {
             $this->error("Unsupported format: {$format}. Available formats: markdown, json");
-            return Command::FAILURE;
+            return null;
         }
 
+        return $renderer;
+    }
+
+    protected function prepareOutputDirectory(string $outputPath): void
+    {
         if ($this->option('refresh') && File::exists($outputPath)) {
             $this->warn('Cleaning existing index...');
             $this->cleanGeneratedFiles($outputPath);
@@ -71,17 +114,14 @@ class IndexMigrationsCommand extends Command
         if (!File::exists($outputPath)) {
             File::makeDirectory($outputPath, 0755, true);
         }
+    }
 
-        $typesToIndex = $this->determineTypesToIndex();
-
-        if ($typesToIndex === null) {
-            return Command::FAILURE;
-        }
-
+    protected function collectMigrations(array $types): array
+    {
         $allMigrations = [];
         $stats = [];
 
-        foreach ($typesToIndex as $type) {
+        foreach ($types as $type) {
             $this->info("📂 Indexing migrations: {$type}");
 
             $migrations = $this->indexMigrationType($type);
@@ -96,41 +136,46 @@ class IndexMigrationsCommand extends Command
         $this->info("📊 Total found: " . count($allMigrations) . " migrations");
         $this->newLine();
 
+        return ['migrations' => $allMigrations, 'stats' => $stats];
+    }
+
+    protected function generateIndexFiles(array $migrations, string $outputPath, RendererInterface $renderer): array
+    {
         $this->info('📝 Generating index files...');
 
-        $dataBuilder = app(IndexDataBuilderInterface::class);
-        $generator = new IndexGenerator($outputPath, $renderer, $dataBuilder);
-        $generator->setMigrations($allMigrations);
-        $generated = $generator->generateAll();
+        $generator = new IndexGenerator($outputPath, $renderer, $this->dataBuilder);
+        $generator->setMigrations($migrations);
 
+        return $generator->generateAll();
+    }
+
+    protected function displayGeneratedFiles(array $generated): void
+    {
         $this->newLine();
         $this->info('✅ Generated files:');
+
         foreach ($generated as $type => $filepath) {
             $size = File::exists($filepath) ? $this->formatFileSize(File::size($filepath)) : '0 B';
             $this->line("   - {$type}: {$filepath} ({$size})");
         }
+    }
 
+    protected function copySkillTemplate(string $outputPath): void
+    {
         $skillPath = $outputPath . '/SKILL.md';
-        if (!File::exists($skillPath)) {
-            $this->info('📋 Copying SKILL.md template...');
-            $templatePath = config('migration-searcher.skill_template_path');
 
-            if (File::exists($templatePath)) {
-                File::copy($templatePath, $skillPath);
-            } else {
-                $this->warn('   SKILL.md template not found - you may need to publish package resources');
-            }
+        if (File::exists($skillPath)) {
+            return;
         }
 
-        $duration = round(microtime(true) - $startTime, 2);
+        $this->info('📋 Copying SKILL.md template...');
+        $templatePath = config('migration-searcher.skill_template_path');
 
-        $this->newLine();
-        $this->info("⏱️  Execution time: {$duration}s");
-        $this->newLine();
-
-        $this->displaySummary($stats, $outputPath);
-
-        return Command::SUCCESS;
+        if (File::exists($templatePath)) {
+            File::copy($templatePath, $skillPath);
+        } else {
+            $this->warn('   SKILL.md template not found - you may need to publish package resources');
+        }
     }
 
     protected function determineTypesToIndex(): ?array
@@ -255,15 +300,8 @@ class IndexMigrationsCommand extends Command
         $this->newLine();
         $this->info('💡 How to use:');
         $this->line('   1. Index is available at: ' . $outputPath);
-        $this->line('   2. Commit .claude/ to git - whole team will have access');
-        $this->line('   3. To refresh index: php artisan migrations:index --refresh');
-        $this->line('   4. To index specific type: php artisan migrations:index --type=default');
-        $this->newLine();
-
-        $this->info('🔗 Next steps:');
-        $this->line('   1. git add .claude/');
-        $this->line('   2. git commit -m "Add migrations index"');
-        $this->line('   3. Team does git pull and has access to index');
-        $this->line('   4. Each developer can upload files to their Claude');
+        $this->line('   2. To refresh index: php artisan migrations:index --refresh');
+        $this->line('   3. To index specific type: php artisan migrations:index --type=default');
+        $this->line('   4. To render index in other format: php artisan migrations:index --format=json');
     }
 }

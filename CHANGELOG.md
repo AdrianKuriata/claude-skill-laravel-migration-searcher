@@ -2,6 +2,13 @@
 
 All notable changes to `claude-skill-laravel-migration-searcher` will be documented in this file.
 
+## [1.2.2] - 2026-02-25
+
+### Changed
+- Refactored `IndexMigrationsCommand::handle()` — extracted 7 focused methods: `resolveOutputPath()`, `resolveFormat()`, `prepareOutputDirectory()`, `collectMigrations()`, `generateIndexFiles()`, `displayGeneratedFiles()`, `copySkillTemplate()`
+- Replaced `app(IndexDataBuilderInterface::class)` service locator with constructor injection
+- Added `int` return type to `handle()` method
+
 ## [1.2.1] - 2026-02-25
 
 ### Fixed
