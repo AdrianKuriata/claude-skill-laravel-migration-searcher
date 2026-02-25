@@ -2,6 +2,12 @@
 
 All notable changes to `claude-skill-laravel-migration-searcher` will be documented in this file.
 
+## [1.2.1] - 2026-02-25
+
+### Fixed
+- `isPathWithinBase()` now correctly validates deeply nested non-existent output paths (e.g., default `.claude/skills/laravel-migration-searcher` on first run)
+- `isPathWithinBase()` now normalizes `..` and `.` segments before validation, blocking deep relative path traversal attacks (e.g., `a/b/../../../../tmp/evil`)
+
 ## [1.2.0] - 2026-02-24
 
 ### Changed

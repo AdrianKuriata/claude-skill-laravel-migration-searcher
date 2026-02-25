@@ -336,6 +336,24 @@ class IndexMigrationsCommandTest extends TestCase
             ->assertFailed();
     }
 
+    public function testPathTraversalBlockedWithDeepRelativeEscape(): void
+    {
+        $this->artisan('migrations:index', [
+            '--output' => base_path('a/b/../../../../tmp/evil-output'),
+        ])
+            ->expectsOutputToContain('Output path must be within the project root directory')
+            ->assertFailed();
+    }
+
+    public function testPathTraversalBlockedWithDeeplyNestedNonExistentAbsolutePath(): void
+    {
+        $this->artisan('migrations:index', [
+            '--output' => '/tmp/nonexistent-' . uniqid() . '/deep/nested/output',
+        ])
+            ->expectsOutputToContain('Output path must be within the project root directory')
+            ->assertFailed();
+    }
+
     public function testPathWithNonExistentParentButValidGrandparent(): void
     {
         $outputPath = base_path('nonexistent-' . uniqid() . '/output');
@@ -344,6 +362,16 @@ class IndexMigrationsCommandTest extends TestCase
             ->assertSuccessful();
 
         File::deleteDirectory(dirname($outputPath));
+    }
+
+    public function testPathWithDeeplyNestedNonExistentDirectories(): void
+    {
+        $outputPath = base_path('nonexistent-' . uniqid() . '/nonexistent/nested/output');
+
+        $this->artisan('migrations:index', ['--output' => $outputPath])
+            ->assertSuccessful();
+
+        File::deleteDirectory(base_path(explode('/', str_replace(base_path('/'), '', $outputPath))[0]));
     }
 
     // ── Config default path ───────────────────────────────────────

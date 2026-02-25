@@ -193,16 +193,33 @@ class IndexMigrationsCommand extends Command
     protected function isPathWithinBase(string $path): bool
     {
         $basePath = realpath(base_path());
-        $resolvedPath = realpath(dirname($path));
+        $checkPath = dirname($this->normalizePath($path));
 
-        if ($resolvedPath === false) {
-            $resolvedPath = realpath(dirname(dirname($path)));
-            if ($resolvedPath === false) {
-                return false;
+        while (true) {
+            $resolvedPath = realpath($checkPath);
+            if ($resolvedPath !== false) {
+                return str_starts_with($resolvedPath, $basePath);
+            }
+
+            $checkPath = dirname($checkPath);
+        }
+    }
+
+    protected function normalizePath(string $path): string
+    {
+        $isAbsolute = str_starts_with($path, '/');
+        $parts = array_filter(explode('/', $path), fn($part) => $part !== '' && $part !== '.');
+        $normalized = [];
+
+        foreach ($parts as $part) {
+            if ($part === '..' && !empty($normalized) && end($normalized) !== '..') {
+                array_pop($normalized);
+            } else {
+                $normalized[] = $part;
             }
         }
 
-        return str_starts_with($resolvedPath, $basePath);
+        return ($isAbsolute ? '/' : '') . implode('/', $normalized);
     }
 
     protected function resolveRenderer(string $format): ?RendererInterface
