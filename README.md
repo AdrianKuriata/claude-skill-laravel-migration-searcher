@@ -292,8 +292,6 @@ src/
 │   ├── IndexDataBuilder.php              # Sorts, groups, calculates stats
 │   ├── IndexGenerator.php                # Orchestrates data builder + renderer + writer
 │   └── MigrationAnalyzer.php             # Orchestrates parsers
-├── Traits/
-│   └── FormatsFileSize.php
 ├── Writers/
 │   └── IndexFileWriter.php              # File I/O (implements FileWriter)
 └── MigrationSearcherServiceProvider.php  # Registers interface bindings
