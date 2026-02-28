@@ -9,6 +9,23 @@ All notable changes to `claude-skill-laravel-migration-searcher` will be documen
 - PHPStan level 0 for static analysis
 - Docker services `pint` and `phpstan` in docker-compose.test.yml
 
+## [2.2.0] - 2026-02-28
+
+### Added
+- `PathValidator` service with `Contracts\PathValidator` interface — extracted path security logic
+- `RendererResolver` service with `Contracts\RendererResolver` interface — extensible format resolution (OCP)
+- `formats` config key — user-extensible format-to-renderer mapping
+
+### Changed
+- `IndexMigrationsCommand` — injected `PathValidator`, `FileWriter`, `RendererResolver` via constructor (DIP)
+- `IndexMigrationsCommand` — renderer resolution via `RendererResolver` instead of hardcoded match (OCP)
+- `IndexMigrationsCommand` — `$migrationTypes` loaded in constructor
+- `MigrationSearcherServiceProvider` — `Renderer` binding uses `RendererResolver`
+
+### Fixed
+- Progress bar count mismatch when non-PHP files exist in migration directory
+- Null safety in `copySkillTemplate()` when `skill_template_path` config is null
+
 ## [2.1.0] - 2026-02-28
 
 ### Changed
@@ -89,14 +106,12 @@ All notable changes to `claude-skill-laravel-migration-searcher` will be documen
 
 ## Future Plans
 
-### [2.1.0] - Planned
+### Planned
 - Transaction detection (DB::transaction)
 - Seeder analysis
 - Rollback detection
 - Race condition warnings
 - Performance optimization for 5000+ migrations
-
-### [2.2.0] - Planned
 - Web UI for index browsing
 - Migration dependency graph visualization
 

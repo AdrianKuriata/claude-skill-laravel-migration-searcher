@@ -761,7 +761,7 @@ class IndexGeneratorTest extends TestCase
 
     public function testAcceptsRenderer(): void
     {
-        $mockRenderer = $this->createMock(Renderer::class);
+        $mockRenderer = $this->createStub(Renderer::class);
         $mockRenderer->method('getFileExtension')->willReturn('xml');
         $mockRenderer->method('renderFullIndex')->willReturn('<xml/>');
         $mockRenderer->method('renderByTypeIndex')->willReturn('<xml/>');

@@ -7,12 +7,14 @@ use DevSite\LaravelMigrationSearcher\Contracts\FileWriter;
 use DevSite\LaravelMigrationSearcher\Contracts\IndexDataBuilder as IndexDataBuilderContract;
 use DevSite\LaravelMigrationSearcher\Contracts\IndexGenerator as IndexGeneratorContract;
 use DevSite\LaravelMigrationSearcher\Contracts\MigrationAnalyzer as MigrationAnalyzerContract;
+use DevSite\LaravelMigrationSearcher\Contracts\PathValidator as PathValidatorContract;
 use DevSite\LaravelMigrationSearcher\Contracts\Renderer;
-use DevSite\LaravelMigrationSearcher\Renderers\JsonRenderer;
-use DevSite\LaravelMigrationSearcher\Renderers\MarkdownRenderer;
+use DevSite\LaravelMigrationSearcher\Contracts\RendererResolver as RendererResolverContract;
 use DevSite\LaravelMigrationSearcher\Services\IndexDataBuilder;
 use DevSite\LaravelMigrationSearcher\Services\IndexGenerator;
 use DevSite\LaravelMigrationSearcher\Services\MigrationAnalyzer;
+use DevSite\LaravelMigrationSearcher\Services\PathValidator;
+use DevSite\LaravelMigrationSearcher\Services\RendererResolver;
 use DevSite\LaravelMigrationSearcher\Writers\IndexFileWriter;
 use Illuminate\Support\ServiceProvider;
 
@@ -28,12 +30,14 @@ class MigrationSearcherServiceProvider extends ServiceProvider
         $this->app->bind(FileWriter::class, IndexFileWriter::class);
         $this->app->bind(MigrationAnalyzerContract::class, MigrationAnalyzer::class);
         $this->app->bind(IndexDataBuilderContract::class, IndexDataBuilder::class);
+        $this->app->bind(PathValidatorContract::class, fn() => new PathValidator(base_path()));
+        $this->app->bind(RendererResolverContract::class, RendererResolver::class);
 
         $this->app->bind(Renderer::class, function () {
-            return match (config('migration-searcher.default_format', 'markdown')) {
-                'json' => new JsonRenderer(),
-                default => new MarkdownRenderer(),
-            };
+            $resolver = $this->app->make(RendererResolverContract::class);
+            $format = config('migration-searcher.default_format', 'markdown');
+
+            return $resolver->resolve($format);
         });
 
         $this->app->bind(IndexGeneratorContract::class, function ($app) {

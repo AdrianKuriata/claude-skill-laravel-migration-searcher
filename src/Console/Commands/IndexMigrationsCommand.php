@@ -2,12 +2,13 @@
 
 namespace DevSite\LaravelMigrationSearcher\Console\Commands;
 
+use DevSite\LaravelMigrationSearcher\Contracts\FileWriter;
 use DevSite\LaravelMigrationSearcher\Contracts\IndexDataBuilder as IndexDataBuilderContract;
 use DevSite\LaravelMigrationSearcher\Contracts\MigrationAnalyzer as MigrationAnalyzerContract;
+use DevSite\LaravelMigrationSearcher\Contracts\PathValidator as PathValidatorContract;
 use DevSite\LaravelMigrationSearcher\Contracts\Renderer;
+use DevSite\LaravelMigrationSearcher\Contracts\RendererResolver as RendererResolverContract;
 use DevSite\LaravelMigrationSearcher\Services\IndexGenerator;
-use DevSite\LaravelMigrationSearcher\Renderers\JsonRenderer;
-use DevSite\LaravelMigrationSearcher\Renderers\MarkdownRenderer;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 
@@ -26,16 +27,18 @@ class IndexMigrationsCommand extends Command
     public function __construct(
         protected MigrationAnalyzerContract $analyzer,
         protected IndexDataBuilderContract $dataBuilder,
+        protected PathValidatorContract $pathValidator,
+        protected RendererResolverContract $rendererResolver,
+        protected FileWriter $fileWriter,
     ) {
+        $this->migrationTypes = config('migration-searcher.migration_types', [
+            'default' => ['path' => 'database/migrations'],
+        ]);
         parent::__construct();
     }
 
     public function handle(): int
     {
-        $this->migrationTypes = config('migration-searcher.migration_types', [
-            'default' => ['path' => 'database/migrations'],
-        ]);
-
         $outputPath = $this->resolveOutputPath();
         if ($outputPath === null) {
             return Command::FAILURE;
@@ -53,12 +56,12 @@ class IndexMigrationsCommand extends Command
             return Command::FAILURE;
         }
 
-        $result = $this->collectMigrations($typesToIndex);
-        $generated = $this->generateIndexFiles($result['migrations'], $outputPath, $renderer);
+        ['migrations' => $migrations, 'stats' => $stats] = $this->collectMigrations($typesToIndex);
+        $generated = $this->generateIndexFiles($migrations, $outputPath, $renderer);
 
         $this->displayGeneratedFiles($generated);
         $this->copySkillTemplate($outputPath);
-        $this->displaySummary($result['stats']);
+        $this->displaySummary($stats);
 
         return Command::SUCCESS;
     }
@@ -68,7 +71,7 @@ class IndexMigrationsCommand extends Command
         $outputPath = $this->option('output')
             ?: base_path(config('migration-searcher.output_path', '.claude/skills/laravel-migration-searcher'));
 
-        if (!$this->isPathWithinBase($outputPath)) {
+        if (!$this->pathValidator->isWithinBasePath($outputPath)) {
             $this->error('Output path must be within the project root directory.');
             return null;
         }
@@ -81,10 +84,11 @@ class IndexMigrationsCommand extends Command
         $format = $this->option('format')
             ?: config('migration-searcher.default_format', 'markdown');
 
-        $renderer = $this->resolveRenderer($format);
+        $renderer = $this->rendererResolver->resolve($format);
 
         if ($renderer === null) {
-            $this->error("Unsupported format: {$format}. Available formats: markdown, json");
+            $available = implode(', ', $this->rendererResolver->availableFormats());
+            $this->error("Unsupported format: {$format}. Available formats: {$available}");
             return null;
         }
 
@@ -103,6 +107,9 @@ class IndexMigrationsCommand extends Command
         }
     }
 
+    /**
+     * @return array{migrations: array, stats: array}
+     */
     protected function collectMigrations(array $types): array
     {
         $allMigrations = [];
@@ -129,7 +136,7 @@ class IndexMigrationsCommand extends Command
     {
         $this->info('Generating index files...');
 
-        $generator = new IndexGenerator($outputPath, $renderer, $this->dataBuilder);
+        $generator = new IndexGenerator($outputPath, $renderer, $this->dataBuilder, $this->fileWriter);
         $generator->setMigrations($migrations);
 
         return $generator->generateAll();
@@ -156,7 +163,7 @@ class IndexMigrationsCommand extends Command
         $this->info('Copying SKILL.md template...');
         $templatePath = config('migration-searcher.skill_template_path');
 
-        if (File::exists($templatePath)) {
+        if ($templatePath && File::exists($templatePath)) {
             File::copy($templatePath, $skillPath);
         } else {
             $this->warn('   SKILL.md template not found - you may need to publish package resources');
@@ -187,7 +194,8 @@ class IndexMigrationsCommand extends Command
             return [];
         }
 
-        $files = File::files($path);
+        $allFiles = File::files($path);
+        $files = array_values(array_filter($allFiles, fn($file) => $file->getExtension() === 'php'));
         $migrations = [];
 
         $progressBar = $this->output->createProgressBar(count($files));
@@ -196,10 +204,6 @@ class IndexMigrationsCommand extends Command
         $progressBar->start();
 
         foreach ($files as $file) {
-            if ($file->getExtension() !== 'php') {
-                continue;
-            }
-
             $progressBar->setMessage('Analyzing: ' . $file->getFilename());
 
             try {
@@ -220,47 +224,6 @@ class IndexMigrationsCommand extends Command
         return $migrations;
     }
 
-    protected function isPathWithinBase(string $path): bool
-    {
-        $basePath = realpath(base_path());
-        $checkPath = dirname($this->normalizePath($path));
-
-        while (true) {
-            $resolvedPath = realpath($checkPath);
-            if ($resolvedPath !== false) {
-                return str_starts_with($resolvedPath, $basePath);
-            }
-
-            $checkPath = dirname($checkPath);
-        }
-    }
-
-    protected function normalizePath(string $path): string
-    {
-        $isAbsolute = str_starts_with($path, '/');
-        $parts = array_filter(explode('/', $path), fn ($part) => $part !== '' && $part !== '.');
-        $normalized = [];
-
-        foreach ($parts as $part) {
-            if ($part === '..' && !empty($normalized) && end($normalized) !== '..') {
-                array_pop($normalized);
-            } else {
-                $normalized[] = $part;
-            }
-        }
-
-        return ($isAbsolute ? '/' : '') . implode('/', $normalized);
-    }
-
-    protected function resolveRenderer(string $format): ?Renderer
-    {
-        return match ($format) {
-            'markdown' => new MarkdownRenderer(),
-            'json' => new JsonRenderer(),
-            default => null,
-        };
-    }
-
     protected function cleanGeneratedFiles(string $outputPath): void
     {
         $patterns = ['index-*', 'stats.json'];
@@ -279,7 +242,7 @@ class IndexMigrationsCommand extends Command
 
         $this->table(
             ['Type', 'Migrations Count'],
-            collect($stats)->map(fn ($count, $type) => [$type, $count])->values()->all()
+            collect($stats)->map(fn($count, $type) => [$type, $count])->values()->all()
         );
     }
 }

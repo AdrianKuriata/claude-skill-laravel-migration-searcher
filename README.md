@@ -85,6 +85,9 @@ return [
         ],
     ],
 
+    // Custom format-to-renderer mapping (extends built-in markdown/json)
+    'formats' => [],
+
     // Default output format: 'markdown' or 'json'
     'default_format' => 'markdown',
 
@@ -273,7 +276,9 @@ src/
 │   ├── IndexDataBuilder.php              # Data preparation contract
 │   ├── IndexGenerator.php
 │   ├── MigrationAnalyzer.php
-│   └── Renderer.php                      # Output format contract
+│   ├── PathValidator.php                 # Path security contract
+│   ├── Renderer.php                      # Output format contract
+│   └── RendererResolver.php              # Format resolution contract
 ├── DTOs/
 │   ├── BaseDTO.php                       # Abstract base with Arrayable + reflection toArray()
 │   └── MigrationAnalysisResult.php       # Typed immutable analysis output
@@ -291,13 +296,15 @@ src/
 │   ├── ComplexityCalculator.php          # Pure function: calculates 1-10 score
 │   ├── IndexDataBuilder.php              # Sorts, groups, calculates stats
 │   ├── IndexGenerator.php                # Orchestrates data builder + renderer + writer
-│   └── MigrationAnalyzer.php             # Orchestrates parsers
+│   ├── MigrationAnalyzer.php             # Orchestrates parsers
+│   ├── PathValidator.php                 # Path traversal protection
+│   └── RendererResolver.php              # Config-based format resolution
 ├── Writers/
 │   └── IndexFileWriter.php              # File I/O (implements FileWriter)
 └── MigrationSearcherServiceProvider.php  # Registers interface bindings
 ```
 
-Data flows through a clean pipeline: raw migrations → `MigrationAnalyzer` (returns `MigrationAnalysisResult` DTO) → `toArray()` → `IndexDataBuilder` (sort, group, stats) → `Renderer` (format to markdown/JSON) → file output. Adding a new format requires only a new class implementing `Renderer`.
+Data flows through a clean pipeline: raw migrations → `MigrationAnalyzer` (returns `MigrationAnalysisResult` DTO) → `toArray()` → `IndexDataBuilder` (sort, group, stats) → `Renderer` (format to markdown/JSON) → file output. Adding a new format requires only a new class implementing `Renderer` and registering it in the `formats` config key.
 
 All contracts are bound in the service provider, making it easy to swap implementations or mock in tests.
 

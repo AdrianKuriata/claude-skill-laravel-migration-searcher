@@ -56,6 +56,22 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Custom Formats
+    |--------------------------------------------------------------------------
+    |
+    | Register custom output formats by mapping a format name to a Renderer class.
+    | These extend/override the built-in formats (markdown, json).
+    |
+    | Example:
+    |   'formats' => [
+    |       'yaml' => App\Renderers\YamlRenderer::class,
+    |   ],
+    |
+    */
+    'formats' => [],
+
+    /*
+    |--------------------------------------------------------------------------
     | Default Output Format
     |--------------------------------------------------------------------------
     |
