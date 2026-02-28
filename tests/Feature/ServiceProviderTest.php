@@ -7,12 +7,16 @@ use DevSite\LaravelMigrationSearcher\Contracts\FileWriter;
 use DevSite\LaravelMigrationSearcher\Contracts\IndexDataBuilder as IndexDataBuilderContract;
 use DevSite\LaravelMigrationSearcher\Contracts\IndexGenerator as IndexGeneratorContract;
 use DevSite\LaravelMigrationSearcher\Contracts\MigrationAnalyzer as MigrationAnalyzerContract;
+use DevSite\LaravelMigrationSearcher\Contracts\PathValidator as PathValidatorContract;
 use DevSite\LaravelMigrationSearcher\Contracts\Renderer;
+use DevSite\LaravelMigrationSearcher\Contracts\RendererResolver as RendererResolverContract;
 use DevSite\LaravelMigrationSearcher\Renderers\JsonRenderer;
 use DevSite\LaravelMigrationSearcher\Renderers\MarkdownRenderer;
 use DevSite\LaravelMigrationSearcher\Services\IndexDataBuilder;
 use DevSite\LaravelMigrationSearcher\Services\IndexGenerator;
 use DevSite\LaravelMigrationSearcher\Services\MigrationAnalyzer;
+use DevSite\LaravelMigrationSearcher\Services\PathValidator;
+use DevSite\LaravelMigrationSearcher\Services\RendererResolver;
 use DevSite\LaravelMigrationSearcher\Writers\IndexFileWriter;
 use Tests\TestCase;
 
@@ -78,5 +82,22 @@ class ServiceProviderTest extends TestCase
 
         $instance = $this->app->make(Renderer::class);
         $this->assertInstanceOf(JsonRenderer::class, $instance);
+    }
+
+    public function testBindsPathValidator(): void
+    {
+        $instance = $this->app->make(PathValidatorContract::class);
+        $this->assertInstanceOf(PathValidator::class, $instance);
+    }
+
+    public function testBindsRendererResolver(): void
+    {
+        $instance = $this->app->make(RendererResolverContract::class);
+        $this->assertInstanceOf(RendererResolver::class, $instance);
+    }
+
+    public function testFormatsConfigKeyExists(): void
+    {
+        $this->assertIsArray(config('migration-searcher.formats'));
     }
 }

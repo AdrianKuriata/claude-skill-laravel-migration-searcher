@@ -222,6 +222,20 @@ class IndexMigrationsCommandTest extends TestCase
             ->assertFailed();
     }
 
+    public function testCustomRendererViaFormatsConfig(): void
+    {
+        $this->app['config']->set('migration-searcher.formats', [
+            'custom' => \DevSite\LaravelMigrationSearcher\Renderers\JsonRenderer::class,
+        ]);
+
+        $this->artisan('migrations:index', [
+            '--output' => $this->outputPath,
+            '--format' => 'custom',
+        ])->assertSuccessful();
+
+        $this->assertFileExists($this->outputPath . '/index-full.json');
+    }
+
     public function testFormatOptionRespectsConfigDefault(): void
     {
         $this->app['config']->set('migration-searcher.default_format', 'json');
