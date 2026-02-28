@@ -308,7 +308,7 @@ src/
 
 Data flows through a clean pipeline: raw migrations → `MigrationAnalyzer` (returns `MigrationAnalysisResult` DTO) → `toArray()` → `IndexDataBuilder` (sort, group, stats) → `Renderer` (format to markdown/JSON) → file output. Adding a new format requires only a new class implementing `Renderer` and registering it in the `formats` config key.
 
-All contracts are bound in the service provider, making it easy to swap implementations or mock in tests.
+All constructor dependencies are required (non-nullable) — no fallbacks to concrete implementations. All contracts are bound in the service provider, making it easy to swap implementations or mock in tests.
 
 ## Requirements
 

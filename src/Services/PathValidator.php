@@ -33,7 +33,7 @@ class PathValidator implements PathValidatorContract
     public function normalize(string $path): string
     {
         $isAbsolute = str_starts_with($path, '/');
-        $parts = array_filter(explode('/', $path), fn($part) => $part !== '' && $part !== '.');
+        $parts = array_filter(explode('/', $path), fn ($part) => $part !== '' && $part !== '.');
         $normalized = [];
 
         foreach ($parts as $part) {

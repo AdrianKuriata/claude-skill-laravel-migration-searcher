@@ -2,6 +2,12 @@
 
 All notable changes to `claude-skill-laravel-migration-searcher` will be documented in this file.
 
+## [2.6.0] - 2026-02-28
+
+### Changed
+- `IndexGenerator` — all constructor dependencies are now required (non-nullable), removing fallbacks to concrete implementations (DIP)
+- `MigrationSearcherServiceProvider` — `FileWriter` is now explicitly injected into `IndexGenerator` binding
+
 ## [2.5.0] - 2026-02-28
 
 ### Added

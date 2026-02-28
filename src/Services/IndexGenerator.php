@@ -6,8 +6,6 @@ use DevSite\LaravelMigrationSearcher\Contracts\FileWriter;
 use DevSite\LaravelMigrationSearcher\Contracts\IndexDataBuilder as IndexDataBuilderContract;
 use DevSite\LaravelMigrationSearcher\Contracts\IndexGenerator as IndexGeneratorContract;
 use DevSite\LaravelMigrationSearcher\Contracts\Renderer;
-use DevSite\LaravelMigrationSearcher\Renderers\MarkdownRenderer;
-use DevSite\LaravelMigrationSearcher\Writers\IndexFileWriter;
 
 class IndexGenerator implements IndexGeneratorContract
 {
@@ -19,14 +17,14 @@ class IndexGenerator implements IndexGeneratorContract
 
     public function __construct(
         string $outputPath,
-        ?Renderer $renderer = null,
-        ?IndexDataBuilderContract $dataBuilder = null,
-        ?FileWriter $writer = null,
+        Renderer $renderer,
+        IndexDataBuilderContract $dataBuilder,
+        FileWriter $writer,
     ) {
         $this->outputPath = rtrim($outputPath, '/');
-        $this->renderer = $renderer ?? new MarkdownRenderer();
-        $this->dataBuilder = $dataBuilder ?? new IndexDataBuilder();
-        $this->writer = $writer ?? new IndexFileWriter();
+        $this->renderer = $renderer;
+        $this->dataBuilder = $dataBuilder;
+        $this->writer = $writer;
     }
 
     public function setMigrations(array $migrations): void

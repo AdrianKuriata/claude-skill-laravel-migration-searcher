@@ -195,7 +195,7 @@ class IndexMigrationsCommand extends Command
         }
 
         $allFiles = File::files($path);
-        $files = array_values(array_filter($allFiles, fn($file) => $file->getExtension() === 'php'));
+        $files = array_values(array_filter($allFiles, fn ($file) => $file->getExtension() === 'php'));
         $migrations = [];
 
         $progressBar = $this->output->createProgressBar(count($files));
@@ -242,7 +242,7 @@ class IndexMigrationsCommand extends Command
 
         $this->table(
             ['Type', 'Migrations Count'],
-            collect($stats)->map(fn($count, $type) => [$type, $count])->values()->all()
+            collect($stats)->map(fn ($count, $type) => [$type, $count])->values()->all()
         );
     }
 }

@@ -7,6 +7,7 @@ use DevSite\LaravelMigrationSearcher\Services\IndexDataBuilder;
 use DevSite\LaravelMigrationSearcher\Services\IndexGenerator;
 use DevSite\LaravelMigrationSearcher\Renderers\JsonRenderer;
 use DevSite\LaravelMigrationSearcher\Renderers\MarkdownRenderer;
+use DevSite\LaravelMigrationSearcher\Writers\IndexFileWriter;
 use Illuminate\Support\Facades\File;
 use Tests\TestCase;
 
@@ -19,7 +20,12 @@ class IndexGeneratorTest extends TestCase
     {
         parent::setUp();
         $this->outputPath = sys_get_temp_dir() . '/index-generator-test-' . uniqid();
-        $this->generator = new IndexGenerator($this->outputPath);
+        $this->generator = new IndexGenerator(
+            $this->outputPath,
+            new MarkdownRenderer(),
+            new IndexDataBuilder(),
+            new IndexFileWriter(),
+        );
     }
 
     protected function tearDown(): void
@@ -701,7 +707,7 @@ class IndexGeneratorTest extends TestCase
 
     public function testGenerateAllUsesRendererFileExtension(): void
     {
-        $generator = new IndexGenerator($this->outputPath, new JsonRenderer(), new IndexDataBuilder());
+        $generator = new IndexGenerator($this->outputPath, new JsonRenderer(), new IndexDataBuilder(), new IndexFileWriter());
         $generator->setMigrations($this->sampleMigrations());
         $generated = $generator->generateAll();
 
@@ -718,7 +724,7 @@ class IndexGeneratorTest extends TestCase
 
     public function testGenerateAllWithJsonRendererProducesValidJson(): void
     {
-        $generator = new IndexGenerator($this->outputPath, new JsonRenderer(), new IndexDataBuilder());
+        $generator = new IndexGenerator($this->outputPath, new JsonRenderer(), new IndexDataBuilder(), new IndexFileWriter());
         $generator->setMigrations($this->sampleMigrations());
         $generated = $generator->generateAll();
 
@@ -730,7 +736,7 @@ class IndexGeneratorTest extends TestCase
 
     public function testGenerateAllWithMarkdownRendererUsesCorrectExtension(): void
     {
-        $generator = new IndexGenerator($this->outputPath, new MarkdownRenderer(), new IndexDataBuilder());
+        $generator = new IndexGenerator($this->outputPath, new MarkdownRenderer(), new IndexDataBuilder(), new IndexFileWriter());
         $generator->setMigrations([]);
         $generated = $generator->generateAll();
 
@@ -740,7 +746,7 @@ class IndexGeneratorTest extends TestCase
 
     public function testStatsUsesRendererExtension(): void
     {
-        $generator = new IndexGenerator($this->outputPath, new MarkdownRenderer(), new IndexDataBuilder());
+        $generator = new IndexGenerator($this->outputPath, new MarkdownRenderer(), new IndexDataBuilder(), new IndexFileWriter());
         $generator->setMigrations($this->sampleMigrations());
         $generated = $generator->generateAll();
 
@@ -759,7 +765,7 @@ class IndexGeneratorTest extends TestCase
         $mockRenderer->method('renderByOperationIndex')->willReturn('<xml/>');
         $mockRenderer->method('renderStats')->willReturn('<xml/>');
 
-        $generator = new IndexGenerator($this->outputPath, $mockRenderer, new IndexDataBuilder());
+        $generator = new IndexGenerator($this->outputPath, $mockRenderer, new IndexDataBuilder(), new IndexFileWriter());
         $generator->setMigrations([]);
         $generated = $generator->generateAll();
 

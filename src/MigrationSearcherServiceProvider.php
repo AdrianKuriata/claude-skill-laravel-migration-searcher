@@ -30,7 +30,7 @@ class MigrationSearcherServiceProvider extends ServiceProvider
         $this->app->bind(FileWriter::class, IndexFileWriter::class);
         $this->app->bind(MigrationAnalyzerContract::class, MigrationAnalyzer::class);
         $this->app->bind(IndexDataBuilderContract::class, IndexDataBuilder::class);
-        $this->app->bind(PathValidatorContract::class, fn() => new PathValidator(base_path()));
+        $this->app->bind(PathValidatorContract::class, fn () => new PathValidator(base_path()));
         $this->app->bind(RendererResolverContract::class, RendererResolver::class);
 
         $this->app->bind(Renderer::class, function () {
@@ -47,6 +47,7 @@ class MigrationSearcherServiceProvider extends ServiceProvider
                 $outputPath,
                 $app->make(Renderer::class),
                 $app->make(IndexDataBuilderContract::class),
+                $app->make(FileWriter::class),
             );
         });
     }
