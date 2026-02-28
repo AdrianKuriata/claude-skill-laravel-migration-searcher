@@ -2,6 +2,21 @@
 
 All notable changes to `claude-skill-laravel-migration-searcher` will be documented in this file.
 
+## [2.5.0] - 2026-02-28
+
+### Added
+- `MarkdownMigrationFormatter` class — extracted migration formatting logic from `MarkdownRenderer` (SRP)
+
+### Changed
+- `MarkdownRenderer` now composes `MarkdownMigrationFormatter` instead of handling formatting internally
+- `MarkdownRenderer::renderStats()` produces Markdown output instead of JSON (LSP fix — all renderer methods now output in the renderer's own format)
+- Stats file uses renderer's file extension (`stats.md` for markdown, `stats.json` for JSON) instead of hardcoded `stats.json`
+- `--refresh` cleanup pattern updated from `stats.json` to `stats.*` to support all formats
+- Replaced Polish text in markdown output: `"na"` → `"on"`, `"przez"` → `"via"`
+
+### Removed
+- Public helper methods from `MarkdownRenderer` (`escapeHtml`, `formatMigrationFull`, `formatMigrationCompact`, `formatDMLSummary`) — moved to `MarkdownMigrationFormatter`
+
 ## [2.4.0] - 2026-02-28
 
 ### Changed

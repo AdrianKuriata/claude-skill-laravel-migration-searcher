@@ -127,7 +127,7 @@ Default (markdown):
 ├── index-by-type.md       # Grouped by migration type
 ├── index-by-table.md      # Grouped by database table
 ├── index-by-operation.md  # Grouped by operation (CREATE/ALTER/DROP/DATA/RENAME)
-└── stats.json             # Statistics and metadata (JSON)
+└── stats.md               # Statistics and metadata
 ```
 
 With `--format=json`:
@@ -290,6 +290,7 @@ src/
 │   └── TableDetector.php                 # Schema::create/table/drop/rename, DB::table
 ├── Renderers/
 │   ├── JsonRenderer.php                  # Formats structured data as JSON
+│   ├── MarkdownMigrationFormatter.php    # Migration formatting helpers for markdown
 │   └── MarkdownRenderer.php              # Formats structured data as markdown
 ├── Services/
 │   ├── ComplexityCalculator.php          # Pure function: calculates 1-10 score

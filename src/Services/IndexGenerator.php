@@ -54,7 +54,7 @@ class IndexGenerator implements IndexGeneratorContract
         $generated['by_operation'] = $this->writeIndex("index-by-operation.{$ext}", $this->renderer->renderByOperationIndex($byOperationData));
 
         $statsData = $this->dataBuilder->buildStats($this->migrations);
-        $generated['stats'] = $this->writeIndex('stats.json', $this->renderer->renderStats($statsData));
+        $generated['stats'] = $this->writeIndex("stats.{$ext}", $this->renderer->renderStats($statsData));
 
         return $generated;
     }

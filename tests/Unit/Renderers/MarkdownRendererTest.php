@@ -60,6 +60,111 @@ class MarkdownRendererTest extends TestCase
         $this->assertStringContainsString('# Full Laravel Migrations Index', $content);
     }
 
+    public function testRenderFullIndexWithDmlOperations(): void
+    {
+        $migration = $this->sampleMigration();
+        $migration['dml_operations'] = [
+            [
+                'type' => 'UPDATE',
+                'table' => 'users',
+                'where_conditions' => ['active = false'],
+                'columns_updated' => ['status'],
+                'has_db_raw' => false,
+                'db_raw_expressions' => [],
+                'data_preview' => "['status' => 'inactive']",
+            ],
+        ];
+
+        $data = $this->dataBuilder->buildFullIndex([$migration]);
+        $content = $this->renderer->renderFullIndex($data);
+        $this->assertStringContainsString('DML Operations:', $content);
+        $this->assertStringContainsString('UPDATE', $content);
+    }
+
+    public function testRenderFullIndexWithRawSql(): void
+    {
+        $migration = $this->sampleMigration();
+        $migration['raw_sql'] = [
+            ['type' => 'statement', 'sql' => 'CREATE INDEX idx ON users (email)', 'operation' => 'CREATE'],
+        ];
+
+        $data = $this->dataBuilder->buildFullIndex([$migration]);
+        $content = $this->renderer->renderFullIndex($data);
+        $this->assertStringContainsString('Raw SQL:', $content);
+        $this->assertStringContainsString('```sql', $content);
+    }
+
+    public function testRenderFullIndexWithEloquentDml(): void
+    {
+        $migration = $this->sampleMigration();
+        $migration['dml_operations'] = [
+            ['type' => 'INSERT', 'model' => 'User', 'method' => 'Eloquent::create', 'note' => 'Static call'],
+        ];
+
+        $data = $this->dataBuilder->buildFullIndex([$migration]);
+        $content = $this->renderer->renderFullIndex($data);
+        $this->assertStringContainsString('User::Eloquent::create', $content);
+    }
+
+    public function testRenderFullIndexWithVariableDml(): void
+    {
+        $migration = $this->sampleMigration();
+        $migration['dml_operations'] = [
+            ['type' => 'UPDATE/INSERT', 'variable' => '$user', 'method' => 'Eloquent->save()', 'note' => 'Save', 'relation' => 'posts'],
+        ];
+
+        $data = $this->dataBuilder->buildFullIndex([$migration]);
+        $content = $this->renderer->renderFullIndex($data);
+        $this->assertStringContainsString('$user->Eloquent->save()', $content);
+        $this->assertStringContainsString('relation: posts', $content);
+    }
+
+    public function testRenderFullIndexWithLoopDml(): void
+    {
+        $migration = $this->sampleMigration();
+        $migration['dml_operations'] = [
+            ['type' => 'LOOP', 'method' => 'foreach', 'operations_in_loop' => ['save()'], 'note' => 'Loop ops'],
+        ];
+
+        $data = $this->dataBuilder->buildFullIndex([$migration]);
+        $content = $this->renderer->renderFullIndex($data);
+        $this->assertStringContainsString('LOOP', $content);
+        $this->assertStringContainsString('foreach', $content);
+    }
+
+    public function testRenderFullIndexWithDbRaw(): void
+    {
+        $migration = $this->sampleMigration();
+        $migration['dml_operations'] = [
+            [
+                'type' => 'UPDATE',
+                'table' => 'orders',
+                'where_conditions' => [],
+                'columns_updated' => ['total'],
+                'has_db_raw' => true,
+                'db_raw_expressions' => ['CASE WHEN x THEN y END'],
+                'data_preview' => '',
+            ],
+        ];
+
+        $data = $this->dataBuilder->buildFullIndex([$migration]);
+        $content = $this->renderer->renderFullIndex($data);
+        $this->assertStringContainsString('Uses DB::raw', $content);
+        $this->assertStringContainsString('CASE WHEN', $content);
+    }
+
+    public function testRenderFullIndexEscapesHtmlInTableNames(): void
+    {
+        $migration = $this->sampleMigration();
+        $migration['tables'] = ['<script>xss</script>' => ['operation' => 'CREATE', 'methods' => []]];
+
+        $data = $this->dataBuilder->buildFullIndex([$migration]);
+        $content = $this->renderer->renderFullIndex($data);
+
+        $this->assertStringNotContainsString('<script>', $content);
+        $this->assertStringContainsString('&lt;script>', $content);
+    }
+
     public function testRenderByTypeIndexContainsTypeHeaders(): void
     {
         $data = $this->dataBuilder->buildByTypeIndex([$this->sampleMigration()]);
@@ -86,152 +191,6 @@ class MarkdownRendererTest extends TestCase
         $data = $this->dataBuilder->buildByOperationIndex([$this->sampleMigration()]);
         $content = $this->renderer->renderByOperationIndex($data);
         $this->assertStringContainsString('Table Creation (CREATE)', $content);
-    }
-
-    public function testRenderStatsReturnsValidJson(): void
-    {
-        $data = $this->dataBuilder->buildStats([$this->sampleMigration()]);
-        $statsJson = $this->renderer->renderStats($data);
-        $stats = json_decode($statsJson, true);
-
-        $this->assertIsArray($stats);
-        $this->assertSame(1, $stats['total_migrations']);
-        $this->assertArrayHasKey('complexity', $stats);
-    }
-
-    public function testFormatMigrationFullContainsAllSections(): void
-    {
-        $migration = $this->sampleMigration();
-        $migration['foreign_keys'] = [['column' => 'role_id', 'references' => 'id', 'on_table' => 'roles']];
-        $migration['indexes'] = [['type' => 'index', 'definition' => 'email']];
-        $migration['dependencies'] = ['requires' => ['create_roles_table']];
-
-        $content = $this->renderer->formatMigrationFull($migration);
-
-        $this->assertStringContainsString('Tables:', $content);
-        $this->assertStringContainsString('Columns:', $content);
-        $this->assertStringContainsString('DDL Operations:', $content);
-        $this->assertStringContainsString('Foreign Keys:', $content);
-        $this->assertStringContainsString('Indexes:', $content);
-        $this->assertStringContainsString('Dependencies:', $content);
-    }
-
-    public function testFormatMigrationCompactContainsBasicInfo(): void
-    {
-        $content = $this->renderer->formatMigrationCompact($this->sampleMigration());
-
-        $this->assertStringContainsString('create_users_table.php', $content);
-        $this->assertStringContainsString('Tables:', $content);
-        $this->assertStringContainsString('Complexity:', $content);
-    }
-
-    public function testFormatMigrationCompactShowsDataModificationWarning(): void
-    {
-        $migration = $this->sampleMigration();
-        $migration['has_data_modifications'] = true;
-
-        $content = $this->renderer->formatMigrationCompact($migration);
-        $this->assertStringContainsString('Modifies data', $content);
-    }
-
-    public function testFormatDMLSummary(): void
-    {
-        $dml = [
-            ['type' => 'UPDATE', 'table' => 'users'],
-            ['type' => 'UPDATE', 'table' => 'orders'],
-            ['type' => 'INSERT', 'table' => 'logs'],
-        ];
-
-        $summary = $this->renderer->formatDMLSummary($dml);
-        $this->assertStringContainsString('UPDATE: 2', $summary);
-        $this->assertStringContainsString('INSERT: 1', $summary);
-    }
-
-    public function testRenderFullIndexWithDmlOperations(): void
-    {
-        $migration = $this->sampleMigration();
-        $migration['dml_operations'] = [
-            [
-                'type' => 'UPDATE',
-                'table' => 'users',
-                'where_conditions' => ['active = false'],
-                'columns_updated' => ['status'],
-                'has_db_raw' => false,
-                'db_raw_expressions' => [],
-                'data_preview' => "['status' => 'inactive']",
-            ],
-        ];
-
-        $content = $this->renderer->formatMigrationFull($migration);
-        $this->assertStringContainsString('DML Operations:', $content);
-        $this->assertStringContainsString('UPDATE', $content);
-    }
-
-    public function testRenderFullIndexWithRawSql(): void
-    {
-        $migration = $this->sampleMigration();
-        $migration['raw_sql'] = [
-            ['type' => 'statement', 'sql' => 'CREATE INDEX idx ON users (email)', 'operation' => 'CREATE'],
-        ];
-
-        $content = $this->renderer->formatMigrationFull($migration);
-        $this->assertStringContainsString('Raw SQL:', $content);
-        $this->assertStringContainsString('```sql', $content);
-    }
-
-    public function testRenderFullIndexWithEloquentDml(): void
-    {
-        $migration = $this->sampleMigration();
-        $migration['dml_operations'] = [
-            ['type' => 'INSERT', 'model' => 'User', 'method' => 'Eloquent::create', 'note' => 'Static call'],
-        ];
-
-        $content = $this->renderer->formatMigrationFull($migration);
-        $this->assertStringContainsString('User::Eloquent::create', $content);
-    }
-
-    public function testRenderFullIndexWithVariableDml(): void
-    {
-        $migration = $this->sampleMigration();
-        $migration['dml_operations'] = [
-            ['type' => 'UPDATE/INSERT', 'variable' => '$user', 'method' => 'Eloquent->save()', 'note' => 'Save', 'relation' => 'posts'],
-        ];
-
-        $content = $this->renderer->formatMigrationFull($migration);
-        $this->assertStringContainsString('$user->Eloquent->save()', $content);
-        $this->assertStringContainsString('relation: posts', $content);
-    }
-
-    public function testRenderFullIndexWithLoopDml(): void
-    {
-        $migration = $this->sampleMigration();
-        $migration['dml_operations'] = [
-            ['type' => 'LOOP', 'method' => 'foreach', 'operations_in_loop' => ['save()'], 'note' => 'Loop ops'],
-        ];
-
-        $content = $this->renderer->formatMigrationFull($migration);
-        $this->assertStringContainsString('LOOP', $content);
-        $this->assertStringContainsString('foreach', $content);
-    }
-
-    public function testRenderFullIndexWithDbRaw(): void
-    {
-        $migration = $this->sampleMigration();
-        $migration['dml_operations'] = [
-            [
-                'type' => 'UPDATE',
-                'table' => 'orders',
-                'where_conditions' => [],
-                'columns_updated' => ['total'],
-                'has_db_raw' => true,
-                'db_raw_expressions' => ['CASE WHEN x THEN y END'],
-                'data_preview' => '',
-            ],
-        ];
-
-        $content = $this->renderer->formatMigrationFull($migration);
-        $this->assertStringContainsString('Uses DB::raw', $content);
-        $this->assertStringContainsString('CASE WHEN', $content);
     }
 
     public function testRenderByOperationWithDataDml(): void
@@ -280,39 +239,20 @@ class MarkdownRendererTest extends TestCase
         $this->assertStringContainsString('## Raw SQL', $content);
     }
 
-    public function testEscapeHtmlPreventsHtmlInjection(): void
+    public function testRenderStatsReturnsMarkdown(): void
     {
-        $this->assertSame(
-            '&lt;script>alert(1)&lt;/script>',
-            $this->renderer->escapeHtml('<script>alert(1)</script>')
-        );
-    }
+        $data = $this->dataBuilder->buildStats([$this->sampleMigration()]);
+        $content = $this->renderer->renderStats($data);
 
-    public function testEscapeHtmlPreservesNormalCharacters(): void
-    {
-        $this->assertSame(
-            'Eloquent->save()',
-            $this->renderer->escapeHtml('Eloquent->save()')
-        );
-    }
-
-    public function testEscapeHtmlEscapesAmpersand(): void
-    {
-        $this->assertSame(
-            'foo &amp; bar',
-            $this->renderer->escapeHtml('foo & bar')
-        );
-    }
-
-    public function testFullIndexEscapesHtmlInTableNames(): void
-    {
-        $migration = $this->sampleMigration();
-        $migration['tables'] = ['<script>xss</script>' => ['operation' => 'CREATE', 'methods' => []]];
-
-        $content = $this->renderer->formatMigrationFull($migration);
-
-        $this->assertStringNotContainsString('<script>', $content);
-        $this->assertStringContainsString('&lt;script>', $content);
+        $this->assertStringContainsString('# Migration Statistics', $content);
+        $this->assertStringContainsString('**Total migrations:** 1', $content);
+        $this->assertStringContainsString('## By Type', $content);
+        $this->assertStringContainsString('**default:** 1', $content);
+        $this->assertStringContainsString('## Complexity', $content);
+        $this->assertStringContainsString('**Average:**', $content);
+        $this->assertStringContainsString('## Data', $content);
+        $this->assertStringContainsString('## Tables', $content);
+        $this->assertStringContainsString('`users`', $content);
     }
 
     public function testRenderStatsTableStatsTop50(): void
@@ -330,8 +270,38 @@ class MarkdownRendererTest extends TestCase
         }
 
         $data = $this->dataBuilder->buildStats($migrations);
-        $statsJson = $this->renderer->renderStats($data);
-        $stats = json_decode($statsJson, true);
-        $this->assertLessThanOrEqual(50, count($stats['tables']));
+        $content = $this->renderer->renderStats($data);
+
+        $this->assertStringContainsString('## Tables (top 50)', $content);
+    }
+
+    public function testRenderStatsWithEmptyData(): void
+    {
+        $data = $this->dataBuilder->buildStats([]);
+        $content = $this->renderer->renderStats($data);
+
+        $this->assertStringContainsString('**Total migrations:** 0', $content);
+        $this->assertStringNotContainsString('## Tables', $content);
+    }
+
+    public function testRenderByOperationUsesOnInsteadOfPolishNa(): void
+    {
+        $migration = $this->sampleMigration();
+        $migration['tables'] = ['users' => ['operation' => 'DATA', 'methods' => []]];
+        $migration['dml_operations'] = [
+            [
+                'type' => 'UPDATE',
+                'table' => 'users',
+                'where_conditions' => [],
+                'columns_updated' => [],
+                'has_db_raw' => false,
+                'db_raw_expressions' => [],
+                'data_preview' => '',
+            ],
+        ];
+
+        $data = $this->dataBuilder->buildByOperationIndex([$migration]);
+        $content = $this->renderer->renderByOperationIndex($data);
+        $this->assertStringContainsString('on `users`', $content);
     }
 }

@@ -78,7 +78,7 @@ class IndexMigrationsCommandTest extends TestCase
             '--type' => 'default',
         ])->assertSuccessful();
 
-        $this->assertFileExists($this->outputPath . '/stats.json');
+        $this->assertFileExists($this->outputPath . '/stats.md');
     }
 
     public function testInvalidTypeShowsError(): void
@@ -104,7 +104,7 @@ class IndexMigrationsCommandTest extends TestCase
         ])->assertSuccessful();
 
         $this->assertFileExists($this->outputPath . '/index-full.md');
-        $this->assertFileExists($this->outputPath . '/stats.json');
+        $this->assertFileExists($this->outputPath . '/stats.md');
     }
 
     public function testRefreshPreservesSkillMd(): void
@@ -286,10 +286,10 @@ class IndexMigrationsCommandTest extends TestCase
         $this->artisan('migrations:index', ['--output' => $this->outputPath])
             ->assertSuccessful();
 
-        $stats = json_decode(file_get_contents($this->outputPath . '/stats.json'), true);
+        $content = file_get_contents($this->outputPath . '/stats.md');
 
         $phpFiles = count(glob($this->migrationPath . '/*.php'));
-        $this->assertSame($phpFiles, $stats['total_migrations']);
+        $this->assertStringContainsString('**Total migrations:** ' . $phpFiles, $content);
     }
 
     public function testHandlesEmptyDirectory(): void
@@ -305,8 +305,8 @@ class IndexMigrationsCommandTest extends TestCase
         $this->artisan('migrations:index', ['--output' => $this->outputPath])
             ->assertSuccessful();
 
-        $stats = json_decode(file_get_contents($this->outputPath . '/stats.json'), true);
-        $this->assertSame(0, $stats['total_migrations']);
+        $content = file_get_contents($this->outputPath . '/stats.md');
+        $this->assertStringContainsString('**Total migrations:** 0', $content);
 
         File::deleteDirectory($emptyDir);
     }

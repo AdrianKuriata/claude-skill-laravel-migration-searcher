@@ -226,7 +226,7 @@ class IndexMigrationsCommand extends Command
 
     protected function cleanGeneratedFiles(string $outputPath): void
     {
-        $patterns = ['index-*', 'stats.json'];
+        $patterns = ['index-*', 'stats.*'];
 
         foreach ($patterns as $pattern) {
             foreach (File::glob($outputPath . '/' . $pattern) as $file) {

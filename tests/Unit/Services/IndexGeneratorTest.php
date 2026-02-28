@@ -270,57 +270,47 @@ class IndexGeneratorTest extends TestCase
         $this->assertStringContainsString('## Raw SQL', $content);
     }
 
-    // ── stats.json ──────────────────────────────────────────────────
+    // ── stats ──────────────────────────────────────────────────
 
-    public function testStatsJsonStructure(): void
+    public function testStatsStructure(): void
     {
         $this->generator->setMigrations($this->sampleMigrations());
         $this->generator->generateAll();
 
-        $stats = json_decode(file_get_contents($this->outputPath . '/stats.json'), true);
+        $content = file_get_contents($this->outputPath . '/stats.md');
 
-        $requiredKeys = [
-            'generated_at',
-            'total_migrations',
-            'by_type',
-            'tables',
-            'complexity',
-            'data_modifications',
-            'raw_sql_count',
-        ];
-
-        foreach ($requiredKeys as $key) {
-            $this->assertArrayHasKey($key, $stats, "Missing key: {$key}");
-        }
+        $this->assertStringContainsString('# Migration Statistics', $content);
+        $this->assertStringContainsString('**Total migrations:**', $content);
+        $this->assertStringContainsString('## By Type', $content);
+        $this->assertStringContainsString('## Complexity', $content);
+        $this->assertStringContainsString('## Data', $content);
+        $this->assertStringContainsString('## Tables', $content);
     }
 
-    public function testStatsJsonTotalCount(): void
+    public function testStatsTotalCount(): void
     {
         $migrations = $this->sampleMigrations();
         $this->generator->setMigrations($migrations);
         $this->generator->generateAll();
 
-        $stats = json_decode(file_get_contents($this->outputPath . '/stats.json'), true);
+        $content = file_get_contents($this->outputPath . '/stats.md');
 
-        $this->assertSame(count($migrations), $stats['total_migrations']);
+        $this->assertStringContainsString('**Total migrations:** ' . count($migrations), $content);
     }
 
-    public function testStatsJsonComplexityStats(): void
+    public function testStatsComplexityStats(): void
     {
         $this->generator->setMigrations($this->sampleMigrations());
         $this->generator->generateAll();
 
-        $stats = json_decode(file_get_contents($this->outputPath . '/stats.json'), true);
+        $content = file_get_contents($this->outputPath . '/stats.md');
 
-        $this->assertArrayHasKey('average', $stats['complexity']);
-        $this->assertArrayHasKey('max', $stats['complexity']);
-        $this->assertArrayHasKey('high_complexity', $stats['complexity']);
-
-        $this->assertIsNumeric($stats['complexity']['average']);
-        $this->assertSame(4, $stats['complexity']['max']);
+        $this->assertStringContainsString('**Average:**', $content);
+        $this->assertStringContainsString('**Max:** 4', $content);
+        $this->assertStringContainsString('**High complexity (>=7):**', $content);
     }
 
-    public function testStatsJsonTableStatsTop50Limit(): void
+    public function testStatsTableStatsTop50Limit(): void
     {
         $migrations = [];
         for ($i = 0; $i < 60; $i++) {
@@ -350,9 +340,9 @@ class IndexGeneratorTest extends TestCase
         $this->generator->setMigrations($migrations);
         $this->generator->generateAll();
 
-        $stats = json_decode(file_get_contents($this->outputPath . '/stats.json'), true);
+        $content = file_get_contents($this->outputPath . '/stats.md');
 
-        $this->assertLessThanOrEqual(50, count($stats['tables']));
+        $this->assertStringContainsString('## Tables (top 50)', $content);
     }
 
     // ── Edge Cases ──────────────────────────────────────────────────
@@ -368,8 +358,8 @@ class IndexGeneratorTest extends TestCase
             $this->assertFileExists($path);
         }
 
-        $stats = json_decode(file_get_contents($this->outputPath . '/stats.json'), true);
-        $this->assertSame(0, $stats['total_migrations']);
+        $content = file_get_contents($this->outputPath . '/stats.md');
+        $this->assertStringContainsString('**Total migrations:** 0', $content);
     }
 
     public function testMigrationWithNoTables(): void
@@ -748,15 +738,15 @@ class IndexGeneratorTest extends TestCase
         $this->assertStringEndsWith('/index-by-type.md', $generated['by_type']);
     }
 
-    public function testStatsAlwaysJson(): void
+    public function testStatsUsesRendererExtension(): void
     {
         $generator = new IndexGenerator($this->outputPath, new MarkdownRenderer(), new IndexDataBuilder());
         $generator->setMigrations($this->sampleMigrations());
         $generated = $generator->generateAll();
 
-        $this->assertStringEndsWith('/stats.json', $generated['stats']);
-        $decoded = json_decode(file_get_contents($generated['stats']), true);
-        $this->assertNotNull($decoded);
+        $this->assertStringEndsWith('/stats.md', $generated['stats']);
+        $content = file_get_contents($generated['stats']);
+        $this->assertStringContainsString('# Migration Statistics', $content);
     }
 
     public function testAcceptsRenderer(): void

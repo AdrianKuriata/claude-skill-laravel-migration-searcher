@@ -6,6 +6,13 @@ use DevSite\LaravelMigrationSearcher\Contracts\Renderer;
 
 class MarkdownRenderer implements Renderer
 {
+    private MarkdownMigrationFormatter $formatter;
+
+    public function __construct(?MarkdownMigrationFormatter $formatter = null)
+    {
+        $this->formatter = $formatter ?? new MarkdownMigrationFormatter();
+    }
+
     public function getFileExtension(): string
     {
         return 'md';
@@ -19,7 +26,7 @@ class MarkdownRenderer implements Renderer
         $content .= "---\n\n";
 
         foreach ($data['migrations'] as $migration) {
-            $content .= $this->formatMigrationFull($migration);
+            $content .= $this->formatter->formatMigrationFull($migration);
             $content .= "\n---\n\n";
         }
 
@@ -37,13 +44,13 @@ class MarkdownRenderer implements Renderer
         }
 
         foreach ($data['groups'] as $type => $group) {
-            $safeType = $this->escapeHtml($type);
+            $safeType = $this->formatter->escapeHtml($type);
 
             $content .= "## {$safeType}\n\n";
             $content .= "**Count:** {$group['count']}\n\n";
 
             foreach ($group['migrations'] as $migration) {
-                $content .= $this->formatMigrationCompact($migration);
+                $content .= $this->formatter->formatMigrationCompact($migration);
                 $content .= "\n";
             }
 
@@ -59,16 +66,16 @@ class MarkdownRenderer implements Renderer
         $content .= "**Generated:** {$data['generated_at']}\n\n";
 
         foreach ($data['tables'] as $table => $tableData) {
-            $safeTable = $this->escapeHtml($table);
+            $safeTable = $this->formatter->escapeHtml($table);
             $content .= "## Table: `{$safeTable}`\n\n";
             $content .= "**Number of migrations:** {$tableData['count']}\n\n";
 
             foreach ($tableData['migrations'] as $migration) {
-                $safeFilename = $this->escapeHtml($migration['filename']);
-                $safeOp = $this->escapeHtml($migration['table_operation']);
-                $safeType = $this->escapeHtml($migration['type']);
-                $safePath = $this->escapeHtml($migration['relative_path']);
-                $safeTimestamp = $this->escapeHtml($migration['timestamp']);
+                $safeFilename = $this->formatter->escapeHtml($migration['filename']);
+                $safeOp = $this->formatter->escapeHtml($migration['table_operation']);
+                $safeType = $this->formatter->escapeHtml($migration['type']);
+                $safePath = $this->formatter->escapeHtml($migration['relative_path']);
+                $safeTimestamp = $this->formatter->escapeHtml($migration['timestamp']);
 
                 $content .= "### [{$safeOp}] {$safeFilename}\n\n";
                 $content .= "- **Migration type:** {$safeType}\n";
@@ -76,7 +83,7 @@ class MarkdownRenderer implements Renderer
                 $content .= "- **Timestamp:** {$safeTimestamp}\n";
 
                 if (!empty($migration['columns'])) {
-                    $safeColumns = array_map([$this, 'escapeHtml'], array_keys($migration['columns']));
+                    $safeColumns = array_map([$this->formatter, 'escapeHtml'], array_keys($migration['columns']));
                     $content .= "- **Columns:** " . implode(', ', $safeColumns) . "\n";
                 }
 
@@ -85,7 +92,7 @@ class MarkdownRenderer implements Renderer
                 }
 
                 if (!empty($migration['dml_operations'])) {
-                    $content .= "- **DML Operations:** " . $this->formatDMLSummary($migration['dml_operations']) . "\n";
+                    $content .= "- **DML Operations:** " . $this->formatter->formatDMLSummary($migration['dml_operations']) . "\n";
                 }
 
                 $content .= "- **Complexity:** {$migration['complexity']}/10\n";
@@ -109,10 +116,10 @@ class MarkdownRenderer implements Renderer
 
             if ($opData['count'] > 0) {
                 foreach ($opData['migrations'] as $migration) {
-                    $safeFilename = $this->escapeHtml($migration['filename']);
-                    $safeTargetTable = $this->escapeHtml($migration['target_table']);
-                    $safeType = $this->escapeHtml($migration['type']);
-                    $safePath = $this->escapeHtml($migration['relative_path']);
+                    $safeFilename = $this->formatter->escapeHtml($migration['filename']);
+                    $safeTargetTable = $this->formatter->escapeHtml($migration['target_table']);
+                    $safeType = $this->formatter->escapeHtml($migration['type']);
+                    $safePath = $this->formatter->escapeHtml($migration['relative_path']);
 
                     $content .= "### {$safeFilename}\n\n";
                     $content .= "- **Table:** `{$safeTargetTable}`\n";
@@ -120,23 +127,23 @@ class MarkdownRenderer implements Renderer
                     $content .= "- **Path:** `{$safePath}`\n";
 
                     if ($op === 'ALTER' && !empty($migration['columns'])) {
-                        $safeColumns = array_map([$this, 'escapeHtml'], array_keys($migration['columns']));
+                        $safeColumns = array_map([$this->formatter, 'escapeHtml'], array_keys($migration['columns']));
                         $content .= "- **Affected columns:** " . implode(', ', $safeColumns) . "\n";
                     }
 
                     if ($op === 'DATA' && !empty($migration['dml_operations'])) {
                         $content .= "- **DML Operations:**\n";
                         foreach ($migration['dml_operations'] as $dml) {
-                            $safeDmlType = $this->escapeHtml($dml['type']);
-                            $safeDmlTable = $this->escapeHtml($dml['table'] ?? $dml['model'] ?? 'unknown');
-                            $content .= "  - **{$safeDmlType}** na `{$safeDmlTable}`";
+                            $safeDmlType = $this->formatter->escapeHtml($dml['type']);
+                            $safeDmlTable = $this->formatter->escapeHtml($dml['table'] ?? $dml['model'] ?? 'unknown');
+                            $content .= "  - **{$safeDmlType}** on `{$safeDmlTable}`";
 
                             if (!empty($dml['where_conditions'])) {
-                                $safeConditions = array_map([$this, 'escapeHtml'], $dml['where_conditions']);
+                                $safeConditions = array_map([$this->formatter, 'escapeHtml'], $dml['where_conditions']);
                                 $content .= " WHERE: " . implode(' AND ', $safeConditions);
                             }
                             if (!empty($dml['columns_updated'])) {
-                                $safeUpdated = array_map([$this, 'escapeHtml'], $dml['columns_updated']);
+                                $safeUpdated = array_map([$this->formatter, 'escapeHtml'], $dml['columns_updated']);
                                 $content .= " (columns: " . implode(', ', $safeUpdated) . ")";
                             }
                             $content .= "\n";
@@ -155,9 +162,9 @@ class MarkdownRenderer implements Renderer
         $content .= "**Number of migrations with raw SQL:** {$rawSql['count']}\n\n";
 
         foreach ($rawSql['migrations'] as $migration) {
-            $safeFilename = $this->escapeHtml($migration['filename']);
-            $safeType = $this->escapeHtml($migration['type']);
-            $safePath = $this->escapeHtml($migration['relative_path']);
+            $safeFilename = $this->formatter->escapeHtml($migration['filename']);
+            $safeType = $this->formatter->escapeHtml($migration['type']);
+            $safePath = $this->formatter->escapeHtml($migration['relative_path']);
 
             $content .= "### {$safeFilename}\n\n";
             $content .= "- **Migration type:** {$safeType}\n";
@@ -165,9 +172,9 @@ class MarkdownRenderer implements Renderer
             $content .= "- **Number of statements:** " . count($migration['raw_sql']) . "\n\n";
 
             foreach ($migration['raw_sql'] as $sql) {
-                $safeOperation = $this->escapeHtml($sql['operation'] ?? 'unknown');
-                $safeSqlType = $this->escapeHtml($sql['type']);
-                $safeSql = $this->escapeHtml($sql['sql']);
+                $safeOperation = $this->formatter->escapeHtml($sql['operation'] ?? 'unknown');
+                $safeSqlType = $this->formatter->escapeHtml($sql['type']);
+                $safeSql = $this->formatter->escapeHtml($sql['sql']);
                 $content .= "**[{$safeOperation}]** ({$safeSqlType}):\n";
                 $content .= "```sql\n{$safeSql}\n```\n\n";
             }
@@ -178,207 +185,40 @@ class MarkdownRenderer implements Renderer
 
     public function renderStats(array $data): string
     {
-        return json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-    }
+        $content = "# Migration Statistics\n\n";
+        $content .= "**Generated:** {$data['generated_at']}\n";
+        $content .= "**Total migrations:** {$data['total_migrations']}\n\n";
 
-    public function escapeHtml(string $value): string
-    {
-        return str_replace(['&', '<'], ['&amp;', '&lt;'], $value);
-    }
-
-    public function formatMigrationFull(array $migration): string
-    {
-        $safeFilename = $this->escapeHtml($migration['filename']);
-        $safeType = $this->escapeHtml($migration['type']);
-        $safePath = $this->escapeHtml($migration['relative_path']);
-        $safeTimestamp = $this->escapeHtml($migration['timestamp']);
-        $safeName = $this->escapeHtml($migration['name']);
-
-        $content = "### {$safeFilename}\n\n";
-        $content .= "**Type:** {$safeType}  \n";
-        $content .= "**Path:** `{$safePath}`  \n";
-        $content .= "**Timestamp:** {$safeTimestamp}  \n";
-        $content .= "**Name:** {$safeName}  \n";
-        $content .= "**Complexity:** {$migration['complexity']}/10  \n\n";
-
-        if (!empty($migration['tables'])) {
-            $content .= "**Tables:**\n";
-            foreach ($migration['tables'] as $table => $info) {
-                $safeTable = $this->escapeHtml($table);
-                $safeOp = $this->escapeHtml($info['operation']);
-                $content .= "- `{$safeTable}` ({$safeOp})\n";
+        $content .= "## By Type\n\n";
+        if (!empty($data['by_type'])) {
+            foreach ($data['by_type'] as $type => $count) {
+                $content .= "- **{$type}:** {$count}\n";
             }
-            $content .= "\n";
         }
+        $content .= "\n";
 
-        if (!empty($migration['columns'])) {
-            $content .= "**Columns:**\n";
-            foreach ($migration['columns'] as $column => $info) {
-                $safeColumn = $this->escapeHtml($column);
-                $safeColType = $this->escapeHtml($info['type']);
-                $modifiers = !empty($info['modifiers'])
-                    ? ' [' . implode(', ', array_map([$this, 'escapeHtml'], $info['modifiers'])) . ']'
-                    : '';
-                $content .= "- `{$safeColumn}` ({$safeColType}{$modifiers})\n";
-            }
-            $content .= "\n";
-        }
+        $content .= "## Complexity\n\n";
+        $content .= "- **Average:** {$data['complexity']['average']}\n";
+        $content .= "- **Max:** {$data['complexity']['max']}\n";
+        $content .= "- **High complexity (>=7):** {$data['complexity']['high_complexity']}\n\n";
 
-        if (!empty($migration['ddl_operations'])) {
-            $content .= "**DDL Operations:**\n";
-            $grouped = collect($migration['ddl_operations'])->groupBy('category');
-            foreach ($grouped as $category => $ops) {
-                $safeCategory = $this->escapeHtml($category);
-                $content .= "- **{$safeCategory}:** " . count($ops) . " operations\n";
-            }
-            $content .= "\n";
-        }
+        $content .= "## Data\n\n";
+        $content .= "- **Data modifications:** {$data['data_modifications']}\n";
+        $content .= "- **Raw SQL migrations:** {$data['raw_sql_count']}\n\n";
 
-        if (!empty($migration['dml_operations'])) {
-            $content .= "**DML Operations:**\n";
-            foreach ($migration['dml_operations'] as $dml) {
-                $safeDmlType = $this->escapeHtml($dml['type']);
-
-                if (isset($dml['table'])) {
-                    $safeDmlTable = $this->escapeHtml($dml['table']);
-                    $content .= "- **{$safeDmlType}** na `{$safeDmlTable}`";
-
-                    if (!empty($dml['where_conditions'])) {
-                        $safeConditions = array_map([$this, 'escapeHtml'], $dml['where_conditions']);
-                        $content .= "\n  - WHERE: " . implode(' AND ', $safeConditions);
-                    }
-
-                    if (!empty($dml['columns_updated'])) {
-                        $safeUpdated = array_map([$this, 'escapeHtml'], $dml['columns_updated']);
-                        $content .= "\n  - Columns: " . implode(', ', $safeUpdated);
-                    }
-
-                    if (!empty($dml['has_db_raw']) && !empty($dml['db_raw_expressions'])) {
-                        $content .= "\n  - **⚠️ Uses DB::raw:**";
-                        foreach ($dml['db_raw_expressions'] as $rawExpr) {
-                            $preview = strlen($rawExpr) > 100 ? substr($rawExpr, 0, 100) . '...' : $rawExpr;
-                            $safePreview = $this->escapeHtml($preview);
-                            $content .= "\n    ```sql\n    {$safePreview}\n    ```";
-                        }
-                    }
-
-                    if (!empty($dml['data_preview']) && empty($dml['has_db_raw'])) {
-                        $safeDataPreview = $this->escapeHtml($dml['data_preview']);
-                        $content .= "\n  - Data: " . $safeDataPreview;
-                    }
-                } elseif (isset($dml['model'])) {
-                    $safeModel = $this->escapeHtml($dml['model']);
-                    $safeMethod = $this->escapeHtml($dml['method'] ?? 'unknown');
-                    $content .= "- **{$safeDmlType}** przez `{$safeModel}::{$safeMethod}`";
-
-                    if (!empty($dml['note'])) {
-                        $content .= "\n  - " . $this->escapeHtml($dml['note']);
-                    }
-                } elseif (isset($dml['variable'])) {
-                    $safeVariable = $this->escapeHtml($dml['variable']);
-                    $safeMethod = $this->escapeHtml($dml['method'] ?? 'unknown');
-                    $content .= "- **{$safeDmlType}** przez `{$safeVariable}->{$safeMethod}`";
-
-                    if (!empty($dml['relation'])) {
-                        $content .= " (relation: " . $this->escapeHtml($dml['relation']) . ")";
-                    }
-
-                    if (!empty($dml['note'])) {
-                        $content .= "\n  - " . $this->escapeHtml($dml['note']);
-                    }
-                } elseif ($dml['type'] === 'LOOP') {
-                    $safeMethod = $this->escapeHtml($dml['method'] ?? 'unknown');
-                    $content .= "- **🔁 LOOP** ({$safeMethod})";
-
-                    if (!empty($dml['operations_in_loop'])) {
-                        $safeOps = array_map([$this, 'escapeHtml'], $dml['operations_in_loop']);
-                        $content .= "\n  - Operations: " . implode(', ', $safeOps);
-                    }
-
-                    if (!empty($dml['note'])) {
-                        $content .= "\n  - " . $this->escapeHtml($dml['note']);
-                    }
-                }
-
-                $content .= "\n";
-            }
-            $content .= "\n";
-        }
-
-        if (!empty($migration['raw_sql'])) {
-            $content .= "**Raw SQL:** " . count($migration['raw_sql']) . " statement(s)\n\n";
-            foreach ($migration['raw_sql'] as $sql) {
-                $safeOperation = $this->escapeHtml($sql['operation'] ?? 'unknown');
-                $safeSqlType = $this->escapeHtml($sql['type']);
-                $safeSql = $this->escapeHtml($sql['sql']);
-                $content .= "- **[{$safeOperation}]** ({$safeSqlType})\n";
-                $content .= "  ```sql\n  {$safeSql}\n  ```\n";
-            }
-            $content .= "\n";
-        }
-
-        if (!empty($migration['foreign_keys'])) {
-            $content .= "**Foreign Keys:**\n";
-            foreach ($migration['foreign_keys'] as $fk) {
-                $safeColumn = $this->escapeHtml($fk['column']);
-                $safeOnTable = $this->escapeHtml($fk['on_table'] ?? '');
-                $safeReferences = $this->escapeHtml($fk['references'] ?? '');
-                $ref = $fk['on_table'] ? "{$safeOnTable}.{$safeReferences}" : $safeReferences;
-                $content .= "- `{$safeColumn}` → `{$ref}`\n";
-            }
-            $content .= "\n";
-        }
-
-        if (!empty($migration['indexes'])) {
-            $content .= "**Indexes:** " . count($migration['indexes']) . "\n\n";
-        }
-
-        if (!empty($migration['dependencies'])) {
-            $content .= "**Dependencies:**\n";
-            foreach ($migration['dependencies'] as $type => $deps) {
-                if (is_array($deps) && !empty($deps)) {
-                    $safeDepType = $this->escapeHtml($type);
-                    $content .= "- **{$safeDepType}:** " . count($deps) . "\n";
-                }
+        if (!empty($data['tables'])) {
+            $content .= "## Tables (top " . count($data['tables']) . ")\n\n";
+            foreach ($data['tables'] as $table => $info) {
+                $ops = implode(', ', array_map(
+                    fn ($op, $count) => "{$op}: {$count}",
+                    array_keys($info['operations']),
+                    array_values($info['operations'])
+                ));
+                $content .= "- **`{$table}`** — {$info['migrations_count']} migrations ({$ops})\n";
             }
             $content .= "\n";
         }
 
         return $content;
-    }
-
-    public function formatMigrationCompact(array $migration): string
-    {
-        $safeFilename = $this->escapeHtml($migration['filename']);
-        $content = "### {$safeFilename}\n\n";
-
-        $tables = !empty($migration['tables'])
-            ? implode(', ', array_map([$this, 'escapeHtml'], array_keys($migration['tables'])))
-            : 'none';
-        $content .= "**Tables:** {$tables}  \n";
-
-        if (!empty($migration['columns'])) {
-            $safeColumns = array_map([$this, 'escapeHtml'], array_keys($migration['columns']));
-            $content .= "**Columns:** " . implode(', ', $safeColumns) . "  \n";
-        }
-
-        if ($migration['has_data_modifications']) {
-            $content .= "**⚠️ Modifies data**  \n";
-        }
-
-        $content .= "**Complexity:** {$migration['complexity']}/10  \n";
-
-        return $content;
-    }
-
-    public function formatDMLSummary(array $dmlOperations): string
-    {
-        $summary = collect($dmlOperations)->groupBy('type')->map(fn ($ops) => count($ops));
-        $parts = [];
-        foreach ($summary as $type => $count) {
-            $parts[] = "{$type}: {$count}";
-        }
-
-        return implode(', ', $parts);
     }
 }
