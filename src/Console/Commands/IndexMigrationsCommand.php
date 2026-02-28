@@ -253,7 +253,7 @@ class IndexMigrationsCommand extends Command
     protected function normalizePath(string $path): string
     {
         $isAbsolute = str_starts_with($path, '/');
-        $parts = array_filter(explode('/', $path), fn($part) => $part !== '' && $part !== '.');
+        $parts = array_filter(explode('/', $path), fn ($part) => $part !== '' && $part !== '.');
         $normalized = [];
 
         foreach ($parts as $part) {
@@ -294,7 +294,7 @@ class IndexMigrationsCommand extends Command
 
         $this->table(
             ['Type', 'Migrations Count'],
-            collect($stats)->map(fn($count, $type) => [$type, $count])->values()->all()
+            collect($stats)->map(fn ($count, $type) => [$type, $count])->values()->all()
         );
 
         $this->newLine();

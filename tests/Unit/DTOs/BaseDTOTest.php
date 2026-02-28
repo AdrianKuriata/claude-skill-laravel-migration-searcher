@@ -13,7 +13,8 @@ final readonly class ConcreteDTO extends BaseDTO
         public int $camelCaseProperty,
         public array $nestedItems,
         public bool $isActive,
-    ) {}
+    ) {
+    }
 }
 
 class BaseDTOTest extends TestCase

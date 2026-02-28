@@ -152,7 +152,7 @@ class MigrationAnalyzerTest extends TestCase
     {
         $result = $this->analyzeFixture('2024_07_01_100000_complex_migration.php');
 
-        $indexOps = array_filter($result->ddlOperations, fn($op) => $op['category'] === 'index');
+        $indexOps = array_filter($result->ddlOperations, fn ($op) => $op['category'] === 'index');
         $this->assertNotEmpty($indexOps);
     }
 
@@ -160,7 +160,7 @@ class MigrationAnalyzerTest extends TestCase
     {
         $result = $this->analyzeFixture('2024_07_01_100000_complex_migration.php');
 
-        $fkOps = array_filter($result->ddlOperations, fn($op) => $op['category'] === 'foreign_key');
+        $fkOps = array_filter($result->ddlOperations, fn ($op) => $op['category'] === 'foreign_key');
         $this->assertNotEmpty($fkOps);
     }
 
@@ -189,7 +189,7 @@ class MigrationAnalyzerTest extends TestCase
     {
         $result = $this->analyzeFixture('2024_05_15_100000_data_migration.php');
 
-        $updates = array_filter($result->dmlOperations, fn($op) => $op['type'] === 'UPDATE');
+        $updates = array_filter($result->dmlOperations, fn ($op) => $op['type'] === 'UPDATE');
         $this->assertNotEmpty($updates);
 
         $update = array_values($updates)[0];
@@ -210,7 +210,7 @@ class MigrationAnalyzerTest extends TestCase
 
         $result = $this->analyzeContent($content);
 
-        $inserts = array_filter($result->dmlOperations, fn($op) => $op['type'] === 'INSERT');
+        $inserts = array_filter($result->dmlOperations, fn ($op) => $op['type'] === 'INSERT');
         $this->assertNotEmpty($inserts);
     }
 
@@ -218,7 +218,7 @@ class MigrationAnalyzerTest extends TestCase
     {
         $result = $this->analyzeFixture('2024_05_15_100000_data_migration.php');
 
-        $deletes = array_filter($result->dmlOperations, fn($op) => $op['type'] === 'DELETE');
+        $deletes = array_filter($result->dmlOperations, fn ($op) => $op['type'] === 'DELETE');
         $this->assertNotEmpty($deletes);
     }
 
@@ -228,7 +228,7 @@ class MigrationAnalyzerTest extends TestCase
 
         $eloquentInserts = array_filter(
             $result->dmlOperations,
-            fn($op) => $op['type'] === 'INSERT' && isset($op['method']) && str_contains($op['method'], 'Eloquent::create')
+            fn ($op) => $op['type'] === 'INSERT' && isset($op['method']) && str_contains($op['method'], 'Eloquent::create')
         );
         $this->assertNotEmpty($eloquentInserts);
     }
@@ -239,7 +239,7 @@ class MigrationAnalyzerTest extends TestCase
 
         $saves = array_filter(
             $result->dmlOperations,
-            fn($op) => $op['type'] === 'UPDATE/INSERT' && isset($op['method']) && str_contains($op['method'], 'save')
+            fn ($op) => $op['type'] === 'UPDATE/INSERT' && isset($op['method']) && str_contains($op['method'], 'save')
         );
         $this->assertNotEmpty($saves);
     }
@@ -250,7 +250,7 @@ class MigrationAnalyzerTest extends TestCase
 
         $relationCreates = array_filter(
             $result->dmlOperations,
-            fn($op) => isset($op['relation'])
+            fn ($op) => isset($op['relation'])
         );
         $this->assertNotEmpty($relationCreates);
     }
@@ -261,7 +261,7 @@ class MigrationAnalyzerTest extends TestCase
 
         $deletes = array_filter(
             $result->dmlOperations,
-            fn($op) => $op['type'] === 'DELETE' && isset($op['method']) && str_contains($op['method'], 'delete')
+            fn ($op) => $op['type'] === 'DELETE' && isset($op['method']) && str_contains($op['method'], 'delete')
         );
         $this->assertNotEmpty($deletes);
     }
@@ -272,7 +272,7 @@ class MigrationAnalyzerTest extends TestCase
 
         $loops = array_filter(
             $result->dmlOperations,
-            fn($op) => $op['type'] === 'LOOP'
+            fn ($op) => $op['type'] === 'LOOP'
         );
         $this->assertNotEmpty($loops);
 
@@ -287,7 +287,7 @@ class MigrationAnalyzerTest extends TestCase
 
         $updatesWithRaw = array_filter(
             $result->dmlOperations,
-            fn($op) => $op['type'] === 'UPDATE' && !empty($op['has_db_raw'])
+            fn ($op) => $op['type'] === 'UPDATE' && !empty($op['has_db_raw'])
         );
         $this->assertNotEmpty($updatesWithRaw);
 
@@ -302,7 +302,7 @@ class MigrationAnalyzerTest extends TestCase
     {
         $result = $this->analyzeFixture('2024_06_01_100000_raw_sql_migration.php');
 
-        $statements = array_filter($result->rawSql, fn($s) => $s['type'] === 'statement');
+        $statements = array_filter($result->rawSql, fn ($s) => $s['type'] === 'statement');
         $this->assertNotEmpty($statements);
     }
 
@@ -310,7 +310,7 @@ class MigrationAnalyzerTest extends TestCase
     {
         $result = $this->analyzeFixture('2024_06_01_100000_raw_sql_migration.php');
 
-        $unprepared = array_filter($result->rawSql, fn($s) => $s['type'] === 'unprepared');
+        $unprepared = array_filter($result->rawSql, fn ($s) => $s['type'] === 'unprepared');
         $this->assertNotEmpty($unprepared);
     }
 
@@ -318,7 +318,7 @@ class MigrationAnalyzerTest extends TestCase
     {
         $result = $this->analyzeFixture('2024_06_01_100000_raw_sql_migration.php');
 
-        $heredocs = array_filter($result->rawSql, fn($s) => $s['type'] === 'heredoc');
+        $heredocs = array_filter($result->rawSql, fn ($s) => $s['type'] === 'heredoc');
         $this->assertNotEmpty($heredocs);
     }
 
@@ -387,11 +387,15 @@ class MigrationAnalyzerTest extends TestCase
             'default'
         );
 
-        $this->assertSame(1, $afterComplex->complexity,
+        $this->assertSame(
+            1,
+            $afterComplex->complexity,
             'BUG FIXED: Empty migration always gets complexity 1 regardless of call order.'
         );
 
-        $this->assertGreaterThan($simple->complexity, $complex->complexity,
+        $this->assertGreaterThan(
+            $simple->complexity,
+            $complex->complexity,
             'Complex migration should have higher complexity than simple one.'
         );
     }
@@ -522,7 +526,7 @@ class MigrationAnalyzerTest extends TestCase
 
         $result = $this->analyzeContent($content);
 
-        $updates = array_filter($result->dmlOperations, fn($op) => $op['type'] === 'UPDATE');
+        $updates = array_filter($result->dmlOperations, fn ($op) => $op['type'] === 'UPDATE');
         $update = array_values($updates)[0];
         $this->assertContains('status IN (...)', $update['where_conditions']);
     }
@@ -536,7 +540,7 @@ class MigrationAnalyzerTest extends TestCase
 
         $result = $this->analyzeContent($content);
 
-        $updates = array_filter($result->dmlOperations, fn($op) => $op['type'] === 'UPDATE');
+        $updates = array_filter($result->dmlOperations, fn ($op) => $op['type'] === 'UPDATE');
         $update = array_values($updates)[0];
         $this->assertContains('role NOT IN (...)', $update['where_conditions']);
     }
@@ -550,7 +554,7 @@ class MigrationAnalyzerTest extends TestCase
 
         $result = $this->analyzeContent($content);
 
-        $updates = array_filter($result->dmlOperations, fn($op) => $op['type'] === 'UPDATE');
+        $updates = array_filter($result->dmlOperations, fn ($op) => $op['type'] === 'UPDATE');
         $update = array_values($updates)[0];
         $this->assertContains('deleted_at IS NULL', $update['where_conditions']);
     }
@@ -564,7 +568,7 @@ class MigrationAnalyzerTest extends TestCase
 
         $result = $this->analyzeContent($content);
 
-        $updates = array_filter($result->dmlOperations, fn($op) => $op['type'] === 'UPDATE');
+        $updates = array_filter($result->dmlOperations, fn ($op) => $op['type'] === 'UPDATE');
         $update = array_values($updates)[0];
         $this->assertContains('email_verified_at IS NOT NULL', $update['where_conditions']);
     }
@@ -578,7 +582,7 @@ class MigrationAnalyzerTest extends TestCase
 
         $result = $this->analyzeContent($content);
 
-        $updates = array_filter($result->dmlOperations, fn($op) => $op['type'] === 'UPDATE');
+        $updates = array_filter($result->dmlOperations, fn ($op) => $op['type'] === 'UPDATE');
         $update = array_values($updates)[0];
         $this->assertContains('created_at BETWEEN (...)', $update['where_conditions']);
     }
@@ -592,7 +596,7 @@ class MigrationAnalyzerTest extends TestCase
 
         $result = $this->analyzeContent($content);
 
-        $updates = array_filter($result->dmlOperations, fn($op) => $op['type'] === 'UPDATE');
+        $updates = array_filter($result->dmlOperations, fn ($op) => $op['type'] === 'UPDATE');
         $update = array_values($updates)[0];
         $this->assertContains('HAS posts', $update['where_conditions']);
     }
@@ -606,7 +610,7 @@ class MigrationAnalyzerTest extends TestCase
 
         $result = $this->analyzeContent($content);
 
-        $updates = array_filter($result->dmlOperations, fn($op) => $op['type'] === 'UPDATE');
+        $updates = array_filter($result->dmlOperations, fn ($op) => $op['type'] === 'UPDATE');
         $update = array_values($updates)[0];
         $this->assertContains("DOESN'T HAVE orders", $update['where_conditions']);
     }
@@ -620,7 +624,7 @@ class MigrationAnalyzerTest extends TestCase
 
         $result = $this->analyzeContent($content);
 
-        $updates = array_filter($result->dmlOperations, fn($op) => $op['type'] === 'UPDATE');
+        $updates = array_filter($result->dmlOperations, fn ($op) => $op['type'] === 'UPDATE');
         $update = array_values($updates)[0];
         $this->assertContains('OR banned = true', $update['where_conditions']);
     }
@@ -634,7 +638,7 @@ class MigrationAnalyzerTest extends TestCase
 
         $result = $this->analyzeContent($content);
 
-        $updates = array_filter($result->dmlOperations, fn($op) => $op['type'] === 'UPDATE');
+        $updates = array_filter($result->dmlOperations, fn ($op) => $op['type'] === 'UPDATE');
         $update = array_values($updates)[0];
         $this->assertContains('OR age < 5', $update['where_conditions']);
     }
@@ -646,9 +650,9 @@ class MigrationAnalyzerTest extends TestCase
 
         $result = $this->analyzeContent($content);
 
-        $updates = array_filter($result->dmlOperations, fn($op) => $op['type'] === 'UPDATE');
+        $updates = array_filter($result->dmlOperations, fn ($op) => $op['type'] === 'UPDATE');
         $update = array_values($updates)[0];
-        $orConditions = array_filter($update['where_conditions'], fn($c) => str_starts_with($c, 'OR '));
+        $orConditions = array_filter($update['where_conditions'], fn ($c) => str_starts_with($c, 'OR '));
         $orCondition = array_values($orConditions)[0];
         $this->assertStringContainsString('...', $orCondition);
     }
@@ -663,7 +667,7 @@ class MigrationAnalyzerTest extends TestCase
 
         $result = $this->analyzeContent($content);
 
-        $updates = array_filter($result->dmlOperations, fn($op) => $op['type'] === 'UPDATE');
+        $updates = array_filter($result->dmlOperations, fn ($op) => $op['type'] === 'UPDATE');
         $update = array_values($updates)[0];
         $condition = $update['where_conditions'][0];
         $this->assertStringContainsString('...', $condition);
@@ -717,7 +721,7 @@ class MigrationAnalyzerTest extends TestCase
 
         $result = $this->analyzeContent($content);
 
-        $uniqueIndexes = array_filter($result->indexes, fn($idx) => $idx['type'] === 'unique');
+        $uniqueIndexes = array_filter($result->indexes, fn ($idx) => $idx['type'] === 'unique');
         $this->assertNotEmpty($uniqueIndexes);
     }
 
@@ -735,7 +739,7 @@ class MigrationAnalyzerTest extends TestCase
 
         $result = $this->analyzeContent($content);
 
-        $loops = array_filter($result->dmlOperations, fn($op) => $op['type'] === 'LOOP');
+        $loops = array_filter($result->dmlOperations, fn ($op) => $op['type'] === 'LOOP');
         $this->assertNotEmpty($loops);
 
         $loop = array_values($loops)[0];

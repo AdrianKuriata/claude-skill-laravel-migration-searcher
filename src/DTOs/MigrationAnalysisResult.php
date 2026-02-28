@@ -22,5 +22,6 @@ final readonly class MigrationAnalysisResult extends BaseDTO
         public array $methodsUsed,
         public bool $hasDataModifications,
         public int $complexity,
-    ) {}
+    ) {
+    }
 }

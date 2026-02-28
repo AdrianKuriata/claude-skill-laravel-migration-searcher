@@ -324,6 +324,32 @@ docker compose -f docker-compose.test.yml run --rm coverage
 
 The report will be available in the `./coverage/` directory. Open `coverage/index.html` in a browser to inspect line-by-line coverage.
 
+### Code Style
+
+This project uses [Laravel Pint](https://laravel.com/docs/pint) with the PSR-12 preset.
+
+Check formatting:
+
+```bash
+docker compose -f docker-compose.test.yml run --rm pint
+```
+
+Fix formatting locally:
+
+```bash
+docker compose -f docker-compose.test.yml run --rm --no-deps pint bash -c "composer install --no-interaction && vendor/bin/pint"
+```
+
+### Static Analysis
+
+This project uses [PHPStan](https://phpstan.org/) at level 0.
+
+Run analysis:
+
+```bash
+docker compose -f docker-compose.test.yml run --rm phpstan
+```
+
 ## License
 
 MIT License. See [LICENSE](LICENSE) for details.

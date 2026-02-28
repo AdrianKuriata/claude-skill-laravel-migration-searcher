@@ -102,7 +102,7 @@ class IndexDataBuilder implements IndexDataBuilderContract
         }
 
         $rawSqlMigrations = collect($migrations)
-            ->filter(fn($m) => !empty($m['raw_sql']))
+            ->filter(fn ($m) => !empty($m['raw_sql']))
             ->values()
             ->all();
 
@@ -132,7 +132,7 @@ class IndexDataBuilder implements IndexDataBuilderContract
                 'high_complexity' => $collection->where('complexity', '>=', 7)->count(),
             ],
             'data_modifications' => $collection->where('has_data_modifications', true)->count(),
-            'raw_sql_count' => $collection->filter(fn($m) => !empty($m['raw_sql']))->count(),
+            'raw_sql_count' => $collection->filter(fn ($m) => !empty($m['raw_sql']))->count(),
         ];
     }
 
@@ -154,7 +154,7 @@ class IndexDataBuilder implements IndexDataBuilderContract
             }
         }
 
-        uasort($tables, fn($a, $b) => $b['migrations_count'] <=> $a['migrations_count']);
+        uasort($tables, fn ($a, $b) => $b['migrations_count'] <=> $a['migrations_count']);
 
         return array_slice($tables, 0, 50);
     }

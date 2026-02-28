@@ -29,7 +29,7 @@ class DmlParserTest extends TestCase
         $content = "DB::table('users')->where('active', false)->update(['status' => 'inactive']);";
         $ops = $this->parser->extractDMLOperations($content);
 
-        $updates = array_filter($ops, fn($op) => $op['type'] === 'UPDATE');
+        $updates = array_filter($ops, fn ($op) => $op['type'] === 'UPDATE');
         $this->assertNotEmpty($updates);
 
         $update = array_values($updates)[0];
@@ -41,7 +41,7 @@ class DmlParserTest extends TestCase
         $content = "DB::table('settings')->whereNull('deleted_at')->insert(['key' => 'v']);";
         $ops = $this->parser->extractDMLOperations($content);
 
-        $inserts = array_filter($ops, fn($op) => $op['type'] === 'INSERT');
+        $inserts = array_filter($ops, fn ($op) => $op['type'] === 'INSERT');
         $this->assertNotEmpty($inserts);
     }
 
@@ -50,7 +50,7 @@ class DmlParserTest extends TestCase
         $content = "DB::table('users')->where('banned', true)->delete();";
         $ops = $this->parser->extractDMLOperations($content);
 
-        $deletes = array_filter($ops, fn($op) => $op['type'] === 'DELETE');
+        $deletes = array_filter($ops, fn ($op) => $op['type'] === 'DELETE');
         $this->assertNotEmpty($deletes);
     }
 
@@ -59,7 +59,7 @@ class DmlParserTest extends TestCase
         $content = '\App\Models\User::create([\'name\' => \'test\']);';
         $ops = $this->parser->extractDMLOperations($content);
 
-        $creates = array_filter($ops, fn($op) => $op['type'] === 'INSERT' && isset($op['model']));
+        $creates = array_filter($ops, fn ($op) => $op['type'] === 'INSERT' && isset($op['model']));
         $this->assertNotEmpty($creates);
         $this->assertSame('User', array_values($creates)[0]['model']);
     }
@@ -69,7 +69,7 @@ class DmlParserTest extends TestCase
         $content = '$user->save();';
         $ops = $this->parser->extractDMLOperations($content);
 
-        $saves = array_filter($ops, fn($op) => $op['type'] === 'UPDATE/INSERT');
+        $saves = array_filter($ops, fn ($op) => $op['type'] === 'UPDATE/INSERT');
         $this->assertNotEmpty($saves);
         $this->assertSame('$user', array_values($saves)[0]['variable']);
     }
@@ -79,7 +79,7 @@ class DmlParserTest extends TestCase
         $content = '$user->posts()->create([\'title\' => \'test\']);';
         $ops = $this->parser->extractDMLOperations($content);
 
-        $creates = array_filter($ops, fn($op) => isset($op['relation']));
+        $creates = array_filter($ops, fn ($op) => isset($op['relation']));
         $this->assertNotEmpty($creates);
         $this->assertSame('posts', array_values($creates)[0]['relation']);
     }
@@ -89,7 +89,7 @@ class DmlParserTest extends TestCase
         $content = '$user->delete();';
         $ops = $this->parser->extractDMLOperations($content);
 
-        $deletes = array_filter($ops, fn($op) => $op['type'] === 'DELETE' && isset($op['variable']));
+        $deletes = array_filter($ops, fn ($op) => $op['type'] === 'DELETE' && isset($op['variable']));
         $this->assertNotEmpty($deletes);
     }
 
@@ -98,7 +98,7 @@ class DmlParserTest extends TestCase
         $content = 'foreach ($items as $item) { $item->save(); }';
         $ops = $this->parser->extractDMLOperations($content);
 
-        $loops = array_filter($ops, fn($op) => $op['type'] === 'LOOP');
+        $loops = array_filter($ops, fn ($op) => $op['type'] === 'LOOP');
         $this->assertNotEmpty($loops);
         $this->assertSame('foreach', array_values($loops)[0]['method']);
     }
@@ -235,7 +235,7 @@ class DmlParserTest extends TestCase
         $content = "DB::table('orders')->where('status', 'pending')->update(['total' => DB::raw('total * 0.9')]);";
         $ops = $this->parser->extractDMLOperations($content);
 
-        $updates = array_filter($ops, fn($op) => $op['type'] === 'UPDATE');
+        $updates = array_filter($ops, fn ($op) => $op['type'] === 'UPDATE');
         $update = array_values($updates)[0];
         $this->assertTrue($update['has_db_raw']);
         $this->assertNotEmpty($update['db_raw_expressions']);

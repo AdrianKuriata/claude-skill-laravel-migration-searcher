@@ -24,3 +24,29 @@ services:
         composer install --no-interaction 2>&1 &&
         php -d pcov.enabled=1 vendor/bin/phpunit --colors=always --coverage-html coverage --coverage-text 2>&1
       "
+
+  pint:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    working_dir: /app
+    volumes:
+      - .:/app
+    command: >
+      bash -c "
+        composer install --no-interaction 2>&1 &&
+        vendor/bin/pint --test 2>&1
+      "
+
+  phpstan:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    working_dir: /app
+    volumes:
+      - .:/app
+    command: >
+      bash -c "
+        composer install --no-interaction 2>&1 &&
+        vendor/bin/phpstan analyse --no-progress --memory-limit=256M 2>&1
+      "

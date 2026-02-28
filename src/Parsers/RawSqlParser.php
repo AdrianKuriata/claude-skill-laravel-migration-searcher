@@ -78,14 +78,30 @@ class RawSqlParser implements ContentParser
     {
         $sql = strtoupper(trim($sql));
 
-        if (strpos($sql, 'SELECT') === 0) return 'SELECT';
-        if (strpos($sql, 'INSERT') === 0) return 'INSERT';
-        if (strpos($sql, 'UPDATE') === 0) return 'UPDATE';
-        if (strpos($sql, 'DELETE') === 0) return 'DELETE';
-        if (strpos($sql, 'CREATE') === 0) return 'CREATE';
-        if (strpos($sql, 'ALTER') === 0) return 'ALTER';
-        if (strpos($sql, 'DROP') === 0) return 'DROP';
-        if (strpos($sql, 'TRUNCATE') === 0) return 'TRUNCATE';
+        if (strpos($sql, 'SELECT') === 0) {
+            return 'SELECT';
+        }
+        if (strpos($sql, 'INSERT') === 0) {
+            return 'INSERT';
+        }
+        if (strpos($sql, 'UPDATE') === 0) {
+            return 'UPDATE';
+        }
+        if (strpos($sql, 'DELETE') === 0) {
+            return 'DELETE';
+        }
+        if (strpos($sql, 'CREATE') === 0) {
+            return 'CREATE';
+        }
+        if (strpos($sql, 'ALTER') === 0) {
+            return 'ALTER';
+        }
+        if (strpos($sql, 'DROP') === 0) {
+            return 'DROP';
+        }
+        if (strpos($sql, 'TRUNCATE') === 0) {
+            return 'TRUNCATE';
+        }
 
         return 'OTHER';
     }

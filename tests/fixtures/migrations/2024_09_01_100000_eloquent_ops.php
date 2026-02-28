@@ -4,8 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use App\Models\User;
 use App\Models\Setting;
 
-return new class extends Migration
-{
+return new class () extends Migration {
     public function up(): void
     {
         $admin = \App\Models\User::create([

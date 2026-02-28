@@ -373,7 +373,7 @@ class MarkdownRenderer implements Renderer
 
     public function formatDMLSummary(array $dmlOperations): string
     {
-        $summary = collect($dmlOperations)->groupBy('type')->map(fn($ops) => count($ops));
+        $summary = collect($dmlOperations)->groupBy('type')->map(fn ($ops) => count($ops));
         $parts = [];
         foreach ($summary as $type => $count) {
             $parts[] = "{$type}: {$count}";

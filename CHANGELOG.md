@@ -2,6 +2,13 @@
 
 All notable changes to `claude-skill-laravel-migration-searcher` will be documented in this file.
 
+## [2.3.0] - 2026-02-28
+
+### Added
+- Laravel Pint with PSR-12 preset for automatic code formatting
+- PHPStan level 0 for static analysis
+- Docker services `pint` and `phpstan` in docker-compose.test.yml
+
 ## [2.0.0] - 2026-02-25
 
 ### Changed (BREAKING)

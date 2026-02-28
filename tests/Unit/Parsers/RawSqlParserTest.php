@@ -59,7 +59,7 @@ class RawSqlParserTest extends TestCase
         $content = "DB::unprepared(<<<SQL\nSELECT * FROM users\nSQL\n);";
         $sql = $this->parser->extractRawSQL($content);
 
-        $heredocs = array_filter($sql, fn($s) => $s['type'] === 'heredoc');
+        $heredocs = array_filter($sql, fn ($s) => $s['type'] === 'heredoc');
         $this->assertNotEmpty($heredocs);
     }
 
