@@ -1,38 +1,38 @@
 <?php
 
-namespace Tests\Unit\Parsers;
+namespace Tests\Unit\Support;
 
-use DevSite\LaravelMigrationSearcher\Parsers\FileNameParser;
+use DevSite\LaravelMigrationSearcher\Support\MigrationFileInfo;
 use Tests\TestCase;
 
-class FileNameParserTest extends TestCase
+class MigrationFileInfoTest extends TestCase
 {
-    protected FileNameParser $parser;
+    protected MigrationFileInfo $migrationFileInfo;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->parser = new FileNameParser();
+        $this->migrationFileInfo = new MigrationFileInfo();
     }
 
     public function testExtractsTimestampFromStandardFilename(): void
     {
         $this->assertSame(
             '2024_01_15_100000',
-            $this->parser->extractTimestamp('2024_01_15_100000_create_users_table.php')
+            $this->migrationFileInfo->extractTimestamp('2024_01_15_100000_create_users_table.php')
         );
     }
 
     public function testReturnsUnknownForNonStandardFilename(): void
     {
-        $this->assertSame('unknown', $this->parser->extractTimestamp('custom_migration.php'));
+        $this->assertSame('unknown', $this->migrationFileInfo->extractTimestamp('custom_migration.php'));
     }
 
     public function testExtractsMigrationName(): void
     {
         $this->assertSame(
             'create_users_table',
-            $this->parser->extractMigrationName('2024_01_15_100000_create_users_table.php')
+            $this->migrationFileInfo->extractMigrationName('2024_01_15_100000_create_users_table.php')
         );
     }
 
@@ -40,7 +40,7 @@ class FileNameParserTest extends TestCase
     {
         $this->assertSame(
             'custom_migration',
-            $this->parser->extractMigrationName('custom_migration.php')
+            $this->migrationFileInfo->extractMigrationName('custom_migration.php')
         );
     }
 
@@ -49,13 +49,13 @@ class FileNameParserTest extends TestCase
         $basePath = base_path();
         $filepath = $basePath . '/database/migrations/test.php';
 
-        $this->assertSame('database/migrations/test.php', $this->parser->getRelativePath($filepath));
+        $this->assertSame('database/migrations/test.php', $this->migrationFileInfo->getRelativePath($filepath));
     }
 
     public function testGetRelativePathReturnsOriginalWhenNotUnderBasePath(): void
     {
         $filepath = '/some/other/path/test.php';
 
-        $this->assertSame($filepath, $this->parser->getRelativePath($filepath));
+        $this->assertSame($filepath, $this->migrationFileInfo->getRelativePath($filepath));
     }
 }

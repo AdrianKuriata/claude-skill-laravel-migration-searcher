@@ -286,7 +286,6 @@ src/
 │   ├── DdlParser.php                     # Columns, indexes, foreign keys, DDL ops
 │   ├── DependencyParser.php              # @requires, @depends_on, FK dependencies
 │   ├── DmlParser.php                     # INSERT/UPDATE/DELETE, Eloquent, loops
-│   ├── FileNameParser.php                # Timestamp, name, relative path
 │   ├── RawSqlParser.php                  # DB::statement, unprepared, raw, heredoc
 │   └── TableDetector.php                 # Schema::create/table/drop/rename, DB::table
 ├── Renderers/
@@ -299,6 +298,8 @@ src/
 │   ├── MigrationAnalyzer.php             # Orchestrates parsers
 │   ├── PathValidator.php                 # Path traversal protection
 │   └── RendererResolver.php              # Config-based format resolution
+├── Support/
+│   └── MigrationFileInfo.php            # Timestamp, name, relative path from filename
 ├── Writers/
 │   └── IndexFileWriter.php              # File I/O (implements FileWriter)
 └── MigrationSearcherServiceProvider.php  # Registers interface bindings

@@ -1,8 +1,8 @@
 <?php
 
-namespace DevSite\LaravelMigrationSearcher\Parsers;
+namespace DevSite\LaravelMigrationSearcher\Support;
 
-class FileNameParser
+class MigrationFileInfo
 {
     public function extractTimestamp(string $filename): string
     {

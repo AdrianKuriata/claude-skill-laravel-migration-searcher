@@ -2,6 +2,11 @@
 
 All notable changes to `claude-skill-laravel-migration-searcher` will be documented in this file.
 
+## [2.4.0] - 2026-02-28
+
+### Changed
+- `FileNameParser` moved from `Parsers` to `Support\MigrationFileInfo` — the class extracts file metadata, not migration content, so it doesn't belong in `Parsers`
+
 ## [2.3.0] - 2026-02-28
 
 ### Added

@@ -7,7 +7,7 @@ use DevSite\LaravelMigrationSearcher\DTOs\MigrationAnalysisResult;
 use DevSite\LaravelMigrationSearcher\Parsers\DdlParser;
 use DevSite\LaravelMigrationSearcher\Parsers\DependencyParser;
 use DevSite\LaravelMigrationSearcher\Parsers\DmlParser;
-use DevSite\LaravelMigrationSearcher\Parsers\FileNameParser;
+use DevSite\LaravelMigrationSearcher\Support\MigrationFileInfo;
 use DevSite\LaravelMigrationSearcher\Parsers\RawSqlParser;
 use DevSite\LaravelMigrationSearcher\Parsers\TableDetector;
 use Illuminate\Support\Facades\File;
@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\File;
 class MigrationAnalyzer implements MigrationAnalyzerContract
 {
     public function __construct(
-        protected FileNameParser $fileNameParser = new FileNameParser(),
+        protected MigrationFileInfo $migrationFileInfo = new MigrationFileInfo(),
         protected TableDetector $tableDetector = new TableDetector(),
         protected DdlParser $ddlParser = new DdlParser(),
         protected DmlParser $dmlParser = new DmlParser(),
@@ -48,10 +48,10 @@ class MigrationAnalyzer implements MigrationAnalyzerContract
         return new MigrationAnalysisResult(
             $filename,
             $filepath,
-            $this->fileNameParser->getRelativePath($filepath),
+            $this->migrationFileInfo->getRelativePath($filepath),
             $type,
-            $this->fileNameParser->extractTimestamp($filename),
-            $this->fileNameParser->extractMigrationName($filename),
+            $this->migrationFileInfo->extractTimestamp($filename),
+            $this->migrationFileInfo->extractMigrationName($filename),
             $tables,
             $ddlOperations,
             $dmlOperations,
