@@ -2,6 +2,14 @@
 
 All notable changes to `claude-skill-laravel-migration-searcher` will be documented in this file.
 
+## [2.1.0] - 2026-02-28
+
+### Changed
+- Simplified command output — removed emojis, execution time, file sizes, "How to use" section, and decorative messages
+
+### Removed
+- `FormatsFileSize` trait (no longer needed after output simplification)
+
 ## [2.0.0] - 2026-02-25
 
 ### Changed (BREAKING)

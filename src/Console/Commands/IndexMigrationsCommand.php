@@ -8,14 +8,11 @@ use DevSite\LaravelMigrationSearcher\Contracts\Renderer;
 use DevSite\LaravelMigrationSearcher\Services\IndexGenerator;
 use DevSite\LaravelMigrationSearcher\Renderers\JsonRenderer;
 use DevSite\LaravelMigrationSearcher\Renderers\MarkdownRenderer;
-use DevSite\LaravelMigrationSearcher\Traits\FormatsFileSize;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 
 class IndexMigrationsCommand extends Command
 {
-    use FormatsFileSize;
-
     protected $signature = 'migrations:index
                             {--type= : Type of migrations to index (as defined in config)}
                             {--format= : Output format (markdown, json)}
@@ -35,10 +32,6 @@ class IndexMigrationsCommand extends Command
 
     public function handle(): int
     {
-        $this->info('🔍 Starting Laravel migration indexing...');
-        $this->newLine();
-
-        $startTime = microtime(true);
         $this->migrationTypes = config('migration-searcher.migration_types', [
             'default' => ['path' => 'database/migrations'],
         ]);
@@ -65,13 +58,7 @@ class IndexMigrationsCommand extends Command
 
         $this->displayGeneratedFiles($generated);
         $this->copySkillTemplate($outputPath);
-
-        $duration = round(microtime(true) - $startTime, 2);
-        $this->newLine();
-        $this->info("⏱️  Execution time: {$duration}s");
-        $this->newLine();
-
-        $this->displaySummary($result['stats'], $outputPath);
+        $this->displaySummary($result['stats']);
 
         return Command::SUCCESS;
     }
@@ -122,7 +109,7 @@ class IndexMigrationsCommand extends Command
         $stats = [];
 
         foreach ($types as $type) {
-            $this->info("📂 Indexing migrations: {$type}");
+            $this->info("Indexing migrations: {$type}");
 
             $migrations = $this->indexMigrationType($type);
             $allMigrations = array_merge($allMigrations, $migrations);
@@ -133,15 +120,14 @@ class IndexMigrationsCommand extends Command
         }
 
         $this->newLine();
-        $this->info("📊 Total found: " . count($allMigrations) . " migrations");
-        $this->newLine();
+        $this->info("Total found: " . count($allMigrations) . " migrations");
 
         return ['migrations' => $allMigrations, 'stats' => $stats];
     }
 
     protected function generateIndexFiles(array $migrations, string $outputPath, Renderer $renderer): array
     {
-        $this->info('📝 Generating index files...');
+        $this->info('Generating index files...');
 
         $generator = new IndexGenerator($outputPath, $renderer, $this->dataBuilder);
         $generator->setMigrations($migrations);
@@ -152,11 +138,10 @@ class IndexMigrationsCommand extends Command
     protected function displayGeneratedFiles(array $generated): void
     {
         $this->newLine();
-        $this->info('✅ Generated files:');
+        $this->info('Generated files:');
 
         foreach ($generated as $type => $filepath) {
-            $size = File::exists($filepath) ? $this->formatFileSize(File::size($filepath)) : '0 B';
-            $this->line("   - {$type}: {$filepath} ({$size})");
+            $this->line("   - {$type}: {$filepath}");
         }
     }
 
@@ -168,7 +153,7 @@ class IndexMigrationsCommand extends Command
             return;
         }
 
-        $this->info('📋 Copying SKILL.md template...');
+        $this->info('Copying SKILL.md template...');
         $templatePath = config('migration-searcher.skill_template_path');
 
         if (File::exists($templatePath)) {
@@ -287,21 +272,14 @@ class IndexMigrationsCommand extends Command
         }
     }
 
-    protected function displaySummary(array $stats, string $outputPath): void
+    protected function displaySummary(array $stats): void
     {
-        $this->info('📈 Summary:');
         $this->newLine();
+        $this->info('Summary:');
 
         $this->table(
             ['Type', 'Migrations Count'],
             collect($stats)->map(fn($count, $type) => [$type, $count])->values()->all()
         );
-
-        $this->newLine();
-        $this->info('💡 How to use:');
-        $this->line('   1. Index is available at: ' . $outputPath);
-        $this->line('   2. To refresh index: php artisan migrations:index --refresh');
-        $this->line('   3. To index specific type: php artisan migrations:index --type=default');
-        $this->line('   4. To render index in other format: php artisan migrations:index --format=json');
     }
 }
