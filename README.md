@@ -93,9 +93,6 @@ return [
 
     // Maximum file size in bytes for migration analysis (default: 5MB)
     'max_file_size' => 5242880,
-
-    // Path to SKILL.md template
-    'skill_template_path' => '...',
 ];
 ```
 

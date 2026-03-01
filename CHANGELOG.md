@@ -2,6 +2,14 @@
 
 All notable changes to `claude-skill-laravel-migration-searcher` will be documented in this file.
 
+## [3.0.1] - 2026-03-01
+
+### Fixed
+- `migrations:index` SKILL.md template not found — removed `skill_template_path` from config, template path is now resolved internally by the package
+
+### Removed
+- `skill_template_path` config key (template is a package resource, not user configuration)
+
 ## [3.0.0] - 2026-03-01
 
 ### Added

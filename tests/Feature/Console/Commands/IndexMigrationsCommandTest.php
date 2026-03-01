@@ -33,7 +33,6 @@ class IndexMigrationsCommandTest extends TestCase
                 'path' => $relativePath,
             ],
         ]);
-        $app['config']->set('migration-searcher.skill_template_path', __DIR__ . '/../../../../resources/skill-template/SKILL.md');
     }
 
     protected function tearDown(): void
@@ -270,40 +269,22 @@ class IndexMigrationsCommandTest extends TestCase
 
     public function testWarnsWhenTemplateNotFound(): void
     {
-        $this->app['config']->set('migration-searcher.skill_template_path', '/nonexistent/SKILL.md');
+        $templatePath = dirname(__DIR__, 4) . '/resources/skill-template/SKILL.md';
+        $backupPath = $templatePath . '.bak';
 
-        @unlink($this->outputPath . '/SKILL.md');
+        try {
+            rename($templatePath, $backupPath);
 
-        $this->artisan('migrations:index', ['--output' => $this->outputPath])
-            ->expectsOutputToContain('template not found')
-            ->assertSuccessful();
-    }
+            @unlink($this->outputPath . '/SKILL.md');
 
-    public function testSkillTemplateRejectsDirectoryPath(): void
-    {
-        $this->app['config']->set('migration-searcher.skill_template_path', sys_get_temp_dir());
-
-        $this->artisan('migrations:index', ['--output' => $this->outputPath])
-            ->expectsOutputToContain('template not found')
-            ->assertSuccessful();
-    }
-
-    public function testSkillTemplateRejectsNonStringConfig(): void
-    {
-        $this->app['config']->set('migration-searcher.skill_template_path', 12345);
-
-        $this->artisan('migrations:index', ['--output' => $this->outputPath])
-            ->expectsOutputToContain('template not found')
-            ->assertSuccessful();
-    }
-
-    public function testSkillTemplateRejectsEmptyString(): void
-    {
-        $this->app['config']->set('migration-searcher.skill_template_path', '');
-
-        $this->artisan('migrations:index', ['--output' => $this->outputPath])
-            ->expectsOutputToContain('template not found')
-            ->assertSuccessful();
+            $this->artisan('migrations:index', ['--output' => $this->outputPath])
+                ->expectsOutputToContain('template not found')
+                ->assertSuccessful();
+        } finally {
+            if (file_exists($backupPath)) {
+                rename($backupPath, $templatePath);
+            }
+        }
     }
 
     // ── Filtering/Edge Cases ────────────────────────────────────────

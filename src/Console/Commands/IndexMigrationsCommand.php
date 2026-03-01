@@ -158,29 +158,14 @@ class IndexMigrationsCommand extends Command
         }
 
         $this->info('Copying SKILL.md template...');
-        $templatePath = config('migration-searcher.skill_template_path');
+        $templatePath = dirname(__DIR__, 3) . '/resources/skill-template/SKILL.md';
 
-        if (!$this->isValidTemplatePath($templatePath)) {
+        if (!File::exists($templatePath)) {
             $this->warn('   SKILL.md template not found - you may need to publish package resources');
             return;
         }
 
         File::copy($templatePath, $skillPath);
-    }
-
-    protected function isValidTemplatePath(mixed $templatePath): bool
-    {
-        if (!is_string($templatePath) || empty($templatePath)) {
-            return false;
-        }
-
-        $realPath = realpath($templatePath);
-
-        if ($realPath === false) {
-            return false;
-        }
-
-        return is_file($realPath) && is_readable($realPath);
     }
 
     protected function determineTypesToIndex(): ?array

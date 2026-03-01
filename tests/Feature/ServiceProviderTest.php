@@ -49,7 +49,6 @@ class ServiceProviderTest extends TestCase
         $this->assertNotNull($config);
         $this->assertArrayHasKey('output_path', $config);
         $this->assertArrayHasKey('migration_types', $config);
-        $this->assertArrayHasKey('skill_template_path', $config);
         $this->assertArrayHasKey('default_format', $config);
     }
 

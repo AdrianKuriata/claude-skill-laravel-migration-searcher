@@ -45,17 +45,6 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Skill Template Path
-    |--------------------------------------------------------------------------
-    |
-    | Path to the SKILL.md template that will be copied to the output directory.
-    | This should not be changed unless you're customizing the package.
-    |
-    */
-    'skill_template_path' => __DIR__.'/../resources/skill-template/SKILL.md',
-
-    /*
-    |--------------------------------------------------------------------------
     | Custom Formats
     |--------------------------------------------------------------------------
     |
