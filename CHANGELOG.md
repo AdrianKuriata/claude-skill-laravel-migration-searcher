@@ -2,6 +2,16 @@
 
 All notable changes to `claude-skill-laravel-migration-searcher` will be documented in this file.
 
+## [3.0.2] - 2026-03-01
+
+### Changed
+- Raised PHPStan from level 0 to level 10 (strictest) — all source code fully typed
+- Added `DmlOperationArray`, `MigrationWithTableOp`, `MigrationWithTargetOp` type aliases in `phpstan.neon`
+- All parser contracts return `list<T>` instead of `T[]` for stricter array typing
+- `DependencyParser` always returns full structure with `requires`, `depends_on`, `foreign_keys` keys
+- `RendererResolver` constructor accepts `array<string, mixed>` and filters non-string values internally
+- Tests updated to provide complete DML operation arrays matching `DmlOperationArray` type
+
 ## [3.0.1] - 2026-03-01
 
 ### Fixed

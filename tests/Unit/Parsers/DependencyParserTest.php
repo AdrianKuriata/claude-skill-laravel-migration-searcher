@@ -56,7 +56,11 @@ class DependencyParserTest extends TestCase
 
     public function testEmptyContentReturnsNoDependencies(): void
     {
-        $this->assertEmpty($this->parser->extractDependencies("<?php\n"));
+        $result = $this->parser->extractDependencies("<?php\n");
+
+        $this->assertEmpty($result['requires']);
+        $this->assertEmpty($result['depends_on']);
+        $this->assertEmpty($result['foreign_keys']);
     }
 
     public function testMultipleRequiresAnnotations(): void

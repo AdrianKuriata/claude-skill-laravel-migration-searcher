@@ -19,6 +19,26 @@ class MarkdownMigrationFormatterTest extends TestCase
         $this->formatter = new MarkdownMigrationFormatter($this->sanitizer);
     }
 
+    /** @param array<string, mixed> $overrides */
+    protected function sampleDmlOperation(array $overrides = []): array
+    {
+        return array_merge([
+            'type' => 'UPDATE',
+            'table' => null,
+            'model' => null,
+            'variable' => null,
+            'relation' => null,
+            'method' => null,
+            'note' => null,
+            'data_preview' => null,
+            'where_conditions' => [],
+            'columns_updated' => [],
+            'has_db_raw' => false,
+            'db_raw_expressions' => [],
+            'operations_in_loop' => [],
+        ], $overrides);
+    }
+
     protected function sampleMigration(): array
     {
         return [
@@ -32,7 +52,11 @@ class MarkdownMigrationFormatterTest extends TestCase
             'ddl_operations' => [['method' => 'id', 'params' => [], 'category' => 'column_create']],
             'dml_operations' => [],
             'raw_sql' => [],
-            'dependencies' => [],
+            'dependencies' => [
+                'requires' => [],
+                'depends_on' => [],
+                'foreign_keys' => [],
+            ],
             'columns' => ['name' => ['type' => 'string', 'modifiers' => []]],
             'indexes' => [],
             'foreign_keys' => [],
@@ -58,7 +82,11 @@ class MarkdownMigrationFormatterTest extends TestCase
         $migration = $this->sampleMigration();
         $migration['foreign_keys'] = [['column' => 'role_id', 'references' => 'id', 'on_table' => 'roles']];
         $migration['indexes'] = [['type' => 'index', 'definition' => 'email']];
-        $migration['dependencies'] = ['requires' => ['create_roles_table']];
+        $migration['dependencies'] = [
+            'requires' => ['create_roles_table'],
+            'depends_on' => [],
+            'foreign_keys' => [],
+        ];
 
         $content = $this->formatter->formatMigrationFull($migration);
 
@@ -150,7 +178,7 @@ class MarkdownMigrationFormatterTest extends TestCase
     {
         $migration = $this->sampleMigration();
         $migration['dml_operations'] = [
-            ['type' => 'INSERT', 'model' => 'User', 'method' => 'Eloquent::create', 'note' => 'Static call'],
+            $this->sampleDmlOperation(['type' => 'INSERT', 'model' => 'User', 'method' => 'Eloquent::create', 'note' => 'Static call']),
         ];
 
         $content = $this->formatter->formatMigrationFull($migration);
@@ -162,7 +190,7 @@ class MarkdownMigrationFormatterTest extends TestCase
     {
         $migration = $this->sampleMigration();
         $migration['dml_operations'] = [
-            ['type' => 'UPDATE/INSERT', 'variable' => '$user', 'method' => 'Eloquent->save()', 'note' => 'Save', 'relation' => 'posts'],
+            $this->sampleDmlOperation(['type' => 'UPDATE/INSERT', 'variable' => '$user', 'method' => 'Eloquent->save()', 'note' => 'Save', 'relation' => 'posts']),
         ];
 
         $content = $this->formatter->formatMigrationFull($migration);
@@ -175,7 +203,7 @@ class MarkdownMigrationFormatterTest extends TestCase
     {
         $migration = $this->sampleMigration();
         $migration['dml_operations'] = [
-            ['type' => 'UPDATE/INSERT', 'variable' => '$user', 'method' => 'save()'],
+            $this->sampleDmlOperation(['type' => 'UPDATE/INSERT', 'variable' => '$user', 'method' => 'save()']),
         ];
 
         $content = $this->formatter->formatMigrationFull($migration);
@@ -187,7 +215,7 @@ class MarkdownMigrationFormatterTest extends TestCase
     {
         $migration = $this->sampleMigration();
         $migration['dml_operations'] = [
-            ['type' => 'LOOP', 'method' => 'foreach', 'operations_in_loop' => ['save()'], 'note' => 'Loop ops'],
+            $this->sampleDmlOperation(['type' => 'LOOP', 'method' => 'foreach', 'operations_in_loop' => ['save()'], 'note' => 'Loop ops']),
         ];
 
         $content = $this->formatter->formatMigrationFull($migration);
@@ -232,7 +260,7 @@ class MarkdownMigrationFormatterTest extends TestCase
     {
         $migration = $this->sampleMigration();
         $migration['dml_operations'] = [
-            ['type' => 'INSERT', 'model' => 'User', 'method' => 'create'],
+            $this->sampleDmlOperation(['type' => 'INSERT', 'model' => 'User', 'method' => 'create']),
         ];
 
         $content = $this->formatter->formatMigrationFull($migration);
@@ -312,7 +340,7 @@ class MarkdownMigrationFormatterTest extends TestCase
     {
         $migration = $this->sampleMigration();
         $migration['dml_operations'] = [
-            ['type' => 'INSERT', 'model' => 'User', 'method' => 'create'],
+            $this->sampleDmlOperation(['type' => 'INSERT', 'model' => 'User', 'method' => 'create']),
         ];
 
         $content = $this->formatter->formatMigrationFull($migration);
@@ -323,21 +351,29 @@ class MarkdownMigrationFormatterTest extends TestCase
     public function testFormatMigrationFullWithEmptyDependencies(): void
     {
         $migration = $this->sampleMigration();
-        $migration['dependencies'] = ['requires' => []];
+        $migration['dependencies'] = [
+            'requires' => [],
+            'depends_on' => [],
+            'foreign_keys' => [],
+        ];
 
         $content = $this->formatter->formatMigrationFull($migration);
-        $this->assertStringContainsString('Dependencies:', $content);
+        $this->assertStringNotContainsString('Dependencies:', $content);
         $this->assertStringNotContainsString('**requires:**', $content);
     }
 
-    public function testFormatMigrationFullWithNonArrayDependencies(): void
+    public function testFormatMigrationFullWithNonEmptyDependencies(): void
     {
         $migration = $this->sampleMigration();
-        $migration['dependencies'] = ['note' => 'some string value'];
+        $migration['dependencies'] = [
+            'requires' => ['create_roles_table'],
+            'depends_on' => [],
+            'foreign_keys' => [],
+        ];
 
         $content = $this->formatter->formatMigrationFull($migration);
         $this->assertStringContainsString('Dependencies:', $content);
-        $this->assertStringNotContainsString('**note:**', $content);
+        $this->assertStringContainsString('**requires:**', $content);
     }
 
     public function testFormatMigrationFullWithTableDmlWithoutWhereOrColumns(): void
@@ -360,22 +396,22 @@ class MarkdownMigrationFormatterTest extends TestCase
         $this->assertStringNotContainsString('WHERE:', $content);
     }
 
-    public function testFormatMigrationFullWithRawSqlWithoutOperation(): void
+    public function testFormatMigrationFullWithRawSqlOperation(): void
     {
         $migration = $this->sampleMigration();
         $migration['raw_sql'] = [
-            ['type' => 'statement', 'sql' => 'SELECT 1'],
+            ['type' => 'statement', 'sql' => 'SELECT 1', 'operation' => 'SELECT'],
         ];
 
         $content = $this->formatter->formatMigrationFull($migration);
-        $this->assertStringContainsString('[unknown]', $content);
+        $this->assertStringContainsString('[SELECT]', $content);
     }
 
     public function testFormatMigrationFullWithLoopDmlWithoutOperationsOrNote(): void
     {
         $migration = $this->sampleMigration();
         $migration['dml_operations'] = [
-            ['type' => 'LOOP', 'method' => 'foreach'],
+            $this->sampleDmlOperation(['type' => 'LOOP', 'method' => 'foreach']),
         ];
 
         $content = $this->formatter->formatMigrationFull($migration);

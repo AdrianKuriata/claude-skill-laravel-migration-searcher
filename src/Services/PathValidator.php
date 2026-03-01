@@ -18,6 +18,9 @@ class PathValidator implements PathValidatorContract
     public function isWithinBasePath(string $path): bool
     {
         $basePath = realpath($this->basePath);
+        if ($basePath === false) {
+            return false;
+        }
         $checkPath = dirname($this->normalize($path));
 
         while (true) {

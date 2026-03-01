@@ -3,10 +3,22 @@
 namespace DevSite\LaravelMigrationSearcher\Services;
 
 use DevSite\LaravelMigrationSearcher\Contracts\Services\ComplexityCalculator as ComplexityCalculatorContract;
+use DevSite\LaravelMigrationSearcher\DTOs\DdlOperation;
+use DevSite\LaravelMigrationSearcher\DTOs\DmlOperation;
+use DevSite\LaravelMigrationSearcher\DTOs\ForeignKeyDefinition;
+use DevSite\LaravelMigrationSearcher\DTOs\RawSqlStatement;
+use DevSite\LaravelMigrationSearcher\DTOs\TableInfo;
 use DevSite\LaravelMigrationSearcher\ValueObjects\ComplexityScore;
 
 class ComplexityCalculator implements ComplexityCalculatorContract
 {
+    /**
+     * @param array<string, TableInfo> $tables
+     * @param list<DdlOperation> $ddlOperations
+     * @param list<DmlOperation> $dmlOperations
+     * @param list<RawSqlStatement> $rawSql
+     * @param list<ForeignKeyDefinition> $foreignKeys
+     */
     public function calculate(
         array $tables,
         array $ddlOperations,

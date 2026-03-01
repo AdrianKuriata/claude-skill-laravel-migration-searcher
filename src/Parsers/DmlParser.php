@@ -8,13 +8,13 @@ use DevSite\LaravelMigrationSearcher\Enums\DmlOperationType;
 
 class DmlParser implements DmlParserContract
 {
-    /** @return DmlOperation[] */
+    /** @return list<DmlOperation> */
     public function parse(string $content): array
     {
         return $this->extractDMLOperations($content);
     }
 
-    /** @return DmlOperation[] */
+    /** @return list<DmlOperation> */
     protected function extractDMLOperations(string $content): array
     {
         $operations = [];
@@ -31,6 +31,7 @@ class DmlParser implements DmlParserContract
         return $operations;
     }
 
+    /** @return string[] */
     protected function extractWhereConditions(string $chainedMethods): array
     {
         $conditions = [];
@@ -43,7 +44,7 @@ class DmlParser implements DmlParserContract
         )) {
             foreach ($matches as $match) {
                 $column = $match[1];
-                $operator = isset($match[3]) ? trim($match[2]) : '=';
+                $operator = isset($match[3], $match[2]) ? trim($match[2]) : '=';
                 $value = isset($match[3]) ? trim($match[3]) : (isset($match[2]) ? trim($match[2]) : 'unknown');
 
                 if (strlen($value) > 50) {
@@ -100,7 +101,7 @@ class DmlParser implements DmlParserContract
         )) {
             foreach ($matches as $match) {
                 $column = $match[1];
-                $operator = isset($match[3]) ? trim($match[2]) : '=';
+                $operator = isset($match[3], $match[2]) ? trim($match[2]) : '=';
                 $value = isset($match[3]) ? trim($match[3]) : (isset($match[2]) ? trim($match[2]) : 'unknown');
 
                 if (strlen($value) > 50) {
@@ -114,12 +115,13 @@ class DmlParser implements DmlParserContract
         return $conditions;
     }
 
+    /** @return string[] */
     protected function extractColumnsFromArray(string $arrayContent): array
     {
         $columns = [];
 
         if (preg_match_all('/[\'"]([a-zA-Z_][a-zA-Z0-9_]*)[\'"][\s]*=>/', $arrayContent, $matches)) {
-            $columns = array_unique($matches[1]);
+            $columns = array_values(array_unique($matches[1]));
         }
 
         return $columns;
@@ -128,7 +130,7 @@ class DmlParser implements DmlParserContract
     protected function cleanupDataPreview(string $data, int $maxLength = 100): string
     {
         $data = trim($data);
-        $data = preg_replace('/\s+/', ' ', $data);
+        $data = (string) preg_replace('/\s+/', ' ', $data);
 
         if (strlen($data) > $maxLength) {
             $data = substr($data, 0, $maxLength) . '...';
@@ -146,7 +148,7 @@ class DmlParser implements DmlParserContract
             str_contains($content, '::insert(');
     }
 
-    /** @return DmlOperation[] */
+    /** @return list<DmlOperation> */
     protected function extractDbTableUpdates(string $content): array
     {
         $operations = [];
@@ -185,7 +187,7 @@ class DmlParser implements DmlParserContract
         return $operations;
     }
 
-    /** @return DmlOperation[] */
+    /** @return list<DmlOperation> */
     protected function extractDbTableInserts(string $content): array
     {
         $operations = [];
@@ -213,7 +215,7 @@ class DmlParser implements DmlParserContract
         return $operations;
     }
 
-    /** @return DmlOperation[] */
+    /** @return list<DmlOperation> */
     protected function extractDbTableDeletes(string $content): array
     {
         $operations = [];
@@ -239,7 +241,7 @@ class DmlParser implements DmlParserContract
         return $operations;
     }
 
-    /** @return DmlOperation[] */
+    /** @return list<DmlOperation> */
     protected function extractEloquentCreates(string $content): array
     {
         $operations = [];
@@ -264,7 +266,7 @@ class DmlParser implements DmlParserContract
         return $operations;
     }
 
-    /** @return DmlOperation[] */
+    /** @return list<DmlOperation> */
     protected function extractEloquentSaves(string $content): array
     {
         $operations = [];
@@ -284,7 +286,7 @@ class DmlParser implements DmlParserContract
         return $operations;
     }
 
-    /** @return DmlOperation[] */
+    /** @return list<DmlOperation> */
     protected function extractEloquentRelationCreates(string $content): array
     {
         $operations = [];
@@ -311,7 +313,7 @@ class DmlParser implements DmlParserContract
         return $operations;
     }
 
-    /** @return DmlOperation[] */
+    /** @return list<DmlOperation> */
     protected function extractEloquentDeletes(string $content): array
     {
         $operations = [];
@@ -331,7 +333,7 @@ class DmlParser implements DmlParserContract
         return $operations;
     }
 
-    /** @return DmlOperation[] */
+    /** @return list<DmlOperation> */
     protected function extractLoopOperations(string $content): array
     {
         $operations = [];

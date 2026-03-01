@@ -19,7 +19,7 @@ class MigrationFileInfo implements MigrationFileInfoContract
 
     public function extractMigrationName(string $filename): string
     {
-        return preg_replace(
+        return (string) preg_replace(
             '/^\d{4}_\d{2}_\d{2}_\d{6}_/',
             '',
             str_replace('.php', '', $filename)

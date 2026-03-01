@@ -20,6 +20,7 @@ class IndexMigrationsCommand extends Command
 
     protected $description = 'Index all Laravel migrations and generate comprehensive documentation';
 
+    /** @var array<string, array{path: string}> */
     protected array $migrationTypes = [];
 
     public function __construct(
@@ -33,9 +34,12 @@ class IndexMigrationsCommand extends Command
 
     public function handle(): int
     {
-        $this->migrationTypes = config('migration-searcher.migration_types', [
-            'default' => ['path' => 'database/migrations'],
-        ]);
+        $configTypes = config('migration-searcher.migration_types');
+        /** @var array<string, array{path: string}> $defaultTypes */
+        $defaultTypes = ['default' => ['path' => 'database/migrations']];
+        /** @var array<string, array{path: string}> $resolvedTypes */
+        $resolvedTypes = is_array($configTypes) ? $configTypes : $defaultTypes;
+        $this->migrationTypes = $resolvedTypes;
 
         $outputPath = $this->resolveOutputPath();
         if ($outputPath === null) {
@@ -66,8 +70,12 @@ class IndexMigrationsCommand extends Command
 
     protected function resolveOutputPath(): ?string
     {
-        $outputPath = $this->option('output')
-            ?: base_path(config('migration-searcher.output_path', '.claude/skills/laravel-migration-searcher'));
+        $customOutput = $this->option('output');
+        $configPath = config('migration-searcher.output_path', '.claude/skills/laravel-migration-searcher');
+
+        $outputPath = is_string($customOutput) && $customOutput !== ''
+            ? $customOutput
+            : base_path(is_string($configPath) ? $configPath : '.claude/skills/laravel-migration-searcher');
 
         if (!$this->pathValidator->isWithinBasePath($outputPath)) {
             $this->error('Output path must be within the project root directory.');
@@ -79,8 +87,11 @@ class IndexMigrationsCommand extends Command
 
     protected function resolveFormat(): ?Renderer
     {
-        $format = $this->option('format')
-            ?: config('migration-searcher.default_format', 'markdown');
+        $optionFormat = $this->option('format');
+        $configFormat = config('migration-searcher.default_format', 'markdown');
+        $format = is_string($optionFormat) && $optionFormat !== ''
+            ? $optionFormat
+            : (is_string($configFormat) ? $configFormat : 'markdown');
 
         $renderer = $this->rendererResolver->resolve($format);
 
@@ -106,11 +117,14 @@ class IndexMigrationsCommand extends Command
     }
 
     /**
-     * @return array{migrations: array, stats: array}
+     * @param string[] $types
+     * @return array{migrations: list<array<string, mixed>>, stats: array<string, int>}
      */
     protected function collectMigrations(array $types): array
     {
+        /** @var list<array<string, mixed>> $allMigrations */
         $allMigrations = [];
+        /** @var array<string, int> $stats */
         $stats = [];
 
         foreach ($types as $type) {
@@ -130,6 +144,10 @@ class IndexMigrationsCommand extends Command
         return ['migrations' => $allMigrations, 'stats' => $stats];
     }
 
+    /**
+     * @param list<array<string, mixed>> $migrations
+     * @return array<string, string>
+     */
     protected function generateIndexFiles(array $migrations, string $outputPath, Renderer $renderer): array
     {
         $this->info('Generating index files...');
@@ -139,6 +157,7 @@ class IndexMigrationsCommand extends Command
         return $generator->generateAll($migrations);
     }
 
+    /** @param array<string, string> $generated */
     protected function displayGeneratedFiles(array $generated): void
     {
         $this->newLine();
@@ -168,9 +187,11 @@ class IndexMigrationsCommand extends Command
         File::copy($templatePath, $skillPath);
     }
 
+    /** @return string[]|null */
     protected function determineTypesToIndex(): ?array
     {
-        if ($type = $this->option('type')) {
+        $type = $this->option('type');
+        if (is_string($type) && $type !== '') {
             if (!isset($this->migrationTypes[$type])) {
                 $this->error("Invalid type: {$type}");
                 $this->line("Available types: " . implode(', ', array_keys($this->migrationTypes)));
@@ -182,6 +203,7 @@ class IndexMigrationsCommand extends Command
         return array_keys($this->migrationTypes);
     }
 
+    /** @return list<array<string, mixed>> */
     protected function indexMigrationType(string $type): array
     {
         $typeConfig = $this->migrationTypes[$type];
@@ -199,6 +221,7 @@ class IndexMigrationsCommand extends Command
 
         $allFiles = File::files($path);
         $files = array_values(array_filter($allFiles, fn ($file) => $file->getExtension() === 'php'));
+        /** @var list<array<string, mixed>> $migrations */
         $migrations = [];
 
         $progressBar = $this->output->createProgressBar(count($files));
@@ -237,12 +260,16 @@ class IndexMigrationsCommand extends Command
         );
 
         foreach ($patterns as $pattern) {
-            foreach (File::glob($escapedPath . '/' . $pattern) as $file) {
-                File::delete($file);
+            $files = File::glob($escapedPath . '/' . $pattern);
+            foreach ($files as $file) {
+                if (is_string($file)) {
+                    File::delete($file);
+                }
             }
         }
     }
 
+    /** @param array<string, int> $stats */
     protected function displaySummary(array $stats): void
     {
         $this->newLine();
@@ -250,7 +277,7 @@ class IndexMigrationsCommand extends Command
 
         $this->table(
             ['Type', 'Migrations Count'],
-            collect($stats)->map(fn ($count, $type) => [$type, $count])->values()->all()
+            collect($stats)->map(fn (int $count, string $type): array => [$type, $count])->values()->all()
         );
     }
 }

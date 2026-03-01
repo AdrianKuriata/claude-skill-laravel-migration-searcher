@@ -6,11 +6,13 @@ use DevSite\LaravelMigrationSearcher\Contracts\Parsers\DependencyParser as Depen
 
 class DependencyParser implements DependencyParserContract
 {
+    /** @return array{requires: string[], depends_on: string[], foreign_keys: list<array{column: string, references: string, on_table: string}>} */
     public function parse(string $content): array
     {
         return $this->extractDependencies($content);
     }
 
+    /** @return array{requires: string[], depends_on: string[], foreign_keys: list<array{column: string, references: string, on_table: string}>} */
     public function extractDependencies(string $content): array
     {
         $requires = [];
@@ -44,20 +46,10 @@ class DependencyParser implements DependencyParserContract
             }
         }
 
-        $result = [];
-
-        if (!empty($requires)) {
-            $result['requires'] = $requires;
-        }
-
-        if (!empty($dependsOn)) {
-            $result['depends_on'] = $dependsOn;
-        }
-
-        if (!empty($foreignKeys)) {
-            $result['foreign_keys'] = $foreignKeys;
-        }
-
-        return $result;
+        return [
+            'requires' => $requires,
+            'depends_on' => $dependsOn,
+            'foreign_keys' => $foreignKeys,
+        ];
     }
 }

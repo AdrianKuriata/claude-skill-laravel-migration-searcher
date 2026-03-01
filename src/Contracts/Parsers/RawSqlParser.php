@@ -6,6 +6,6 @@ use DevSite\LaravelMigrationSearcher\DTOs\RawSqlStatement;
 
 interface RawSqlParser extends ContentParser
 {
-    /** @return RawSqlStatement[] */
+    /** @return list<RawSqlStatement> */
     public function parse(string $content): array;
 }

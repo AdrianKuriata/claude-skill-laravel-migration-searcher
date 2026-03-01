@@ -6,6 +6,12 @@ use DevSite\LaravelMigrationSearcher\Enums\DmlOperationType;
 
 final readonly class DmlOperation extends BaseDTO
 {
+    /**
+     * @param string[] $whereConditions
+     * @param string[] $columnsUpdated
+     * @param string[] $dbRawExpressions
+     * @param string[] $operationsInLoop
+     */
     public function __construct(
         public DmlOperationType $type,
         public ?string $table = null,

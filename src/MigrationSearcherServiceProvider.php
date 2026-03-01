@@ -38,6 +38,7 @@ use DevSite\LaravelMigrationSearcher\Services\PathValidator;
 use DevSite\LaravelMigrationSearcher\Services\RendererResolver;
 use DevSite\LaravelMigrationSearcher\Support\MigrationFileInfo;
 use DevSite\LaravelMigrationSearcher\Writers\IndexFileWriter;
+use Illuminate\Contracts\Container\Container;
 use Illuminate\Support\ServiceProvider;
 
 class MigrationSearcherServiceProvider extends ServiceProvider
@@ -59,7 +60,7 @@ class MigrationSearcherServiceProvider extends ServiceProvider
         $this->app->bind(MarkdownMigrationFormatterContract::class, MarkdownMigrationFormatter::class);
         $this->app->bind(TextSanitizer::class, HtmlSanitizer::class);
         $this->app->bind(MigrationFileInfoContract::class, MigrationFileInfo::class);
-        $this->app->bind(MigrationAnalyzerContract::class, function ($app) {
+        $this->app->bind(MigrationAnalyzerContract::class, function (Container $app): MigrationAnalyzer {
             $maxFileSize = config('migration-searcher.max_file_size', 5242880);
 
             if (!is_int($maxFileSize) || $maxFileSize <= 0) {
@@ -79,25 +80,31 @@ class MigrationSearcherServiceProvider extends ServiceProvider
         });
         $this->app->bind(IndexDataBuilderContract::class, IndexDataBuilder::class);
         $this->app->bind(IndexGeneratorFactoryContract::class, IndexGeneratorFactory::class);
-        $this->app->bind(PathValidatorContract::class, fn () => new PathValidator(base_path()));
-        $this->app->bind(RendererResolverContract::class, function ($app) {
+        $this->app->bind(PathValidatorContract::class, fn (): PathValidator => new PathValidator(base_path()));
+        $this->app->bind(RendererResolverContract::class, function (Container $app): RendererResolver {
             $defaults = [
                 'markdown' => MarkdownRenderer::class,
                 'json' => JsonRenderer::class,
             ];
 
-            return new RendererResolver(array_merge($defaults, config('migration-searcher.formats', [])), $app);
+            $configFormats = config('migration-searcher.formats', []);
+            /** @var array<string, class-string<Renderer>> $userFormats */
+            $userFormats = is_array($configFormats) ? $configFormats : [];
+
+            return new RendererResolver(array_merge($defaults, $userFormats), $app);
         });
 
-        $this->app->bind(Renderer::class, function () {
+        $this->app->bind(Renderer::class, function (): ?Renderer {
+            /** @var RendererResolverContract $resolver */
             $resolver = $this->app->make(RendererResolverContract::class);
             $format = config('migration-searcher.default_format', 'markdown');
 
-            return $resolver->resolve($format);
+            return $resolver->resolve(is_string($format) ? $format : 'markdown');
         });
 
-        $this->app->bind(IndexGeneratorContract::class, function ($app) {
-            $outputPath = base_path(config('migration-searcher.output_path', '.claude/skills/laravel-migration-searcher'));
+        $this->app->bind(IndexGeneratorContract::class, function (Container $app): IndexGenerator {
+            $configPath = config('migration-searcher.output_path', '.claude/skills/laravel-migration-searcher');
+            $outputPath = base_path(is_string($configPath) ? $configPath : '.claude/skills/laravel-migration-searcher');
 
             return new IndexGenerator(
                 $outputPath,

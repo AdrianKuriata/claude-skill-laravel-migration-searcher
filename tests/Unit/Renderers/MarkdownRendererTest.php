@@ -22,6 +22,26 @@ class MarkdownRendererTest extends TestCase
         $this->dataBuilder = new IndexDataBuilder();
     }
 
+    /** @param array<string, mixed> $overrides */
+    protected function sampleDmlOperation(array $overrides = []): array
+    {
+        return array_merge([
+            'type' => 'UPDATE',
+            'table' => null,
+            'model' => null,
+            'variable' => null,
+            'relation' => null,
+            'method' => null,
+            'note' => null,
+            'data_preview' => null,
+            'where_conditions' => [],
+            'columns_updated' => [],
+            'has_db_raw' => false,
+            'db_raw_expressions' => [],
+            'operations_in_loop' => [],
+        ], $overrides);
+    }
+
     protected function sampleMigration(): array
     {
         return [
@@ -35,7 +55,11 @@ class MarkdownRendererTest extends TestCase
             'ddl_operations' => [['method' => 'id', 'params' => [], 'category' => 'column_create']],
             'dml_operations' => [],
             'raw_sql' => [],
-            'dependencies' => [],
+            'dependencies' => [
+                'requires' => [],
+                'depends_on' => [],
+                'foreign_keys' => [],
+            ],
             'columns' => ['name' => ['type' => 'string', 'modifiers' => []]],
             'indexes' => [],
             'foreign_keys' => [],
@@ -102,7 +126,7 @@ class MarkdownRendererTest extends TestCase
     {
         $migration = $this->sampleMigration();
         $migration['dml_operations'] = [
-            ['type' => 'INSERT', 'model' => 'User', 'method' => 'Eloquent::create', 'note' => 'Static call'],
+            $this->sampleDmlOperation(['type' => 'INSERT', 'model' => 'User', 'method' => 'Eloquent::create', 'note' => 'Static call']),
         ];
 
         $data = $this->dataBuilder->buildFullIndex([$migration]);
@@ -114,7 +138,7 @@ class MarkdownRendererTest extends TestCase
     {
         $migration = $this->sampleMigration();
         $migration['dml_operations'] = [
-            ['type' => 'UPDATE/INSERT', 'variable' => '$user', 'method' => 'Eloquent->save()', 'note' => 'Save', 'relation' => 'posts'],
+            $this->sampleDmlOperation(['type' => 'UPDATE/INSERT', 'variable' => '$user', 'method' => 'Eloquent->save()', 'note' => 'Save', 'relation' => 'posts']),
         ];
 
         $data = $this->dataBuilder->buildFullIndex([$migration]);
@@ -127,7 +151,7 @@ class MarkdownRendererTest extends TestCase
     {
         $migration = $this->sampleMigration();
         $migration['dml_operations'] = [
-            ['type' => 'LOOP', 'method' => 'foreach', 'operations_in_loop' => ['save()'], 'note' => 'Loop ops'],
+            $this->sampleDmlOperation(['type' => 'LOOP', 'method' => 'foreach', 'operations_in_loop' => ['save()'], 'note' => 'Loop ops']),
         ];
 
         $data = $this->dataBuilder->buildFullIndex([$migration]);

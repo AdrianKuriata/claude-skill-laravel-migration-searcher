@@ -47,6 +47,10 @@ class MigrationAnalyzer implements MigrationAnalyzerContract
         $foreignKeys = $this->ddlParser->extractForeignKeys($content);
         $dependencies = $this->dependencyParser->parse($content);
 
+        $columns = $this->ddlParser->extractColumns($content);
+        $indexes = $this->ddlParser->extractIndexes($content);
+        $methodsUsed = $this->ddlParser->extractMethodsUsed($content);
+
         return new MigrationAnalysisResult(
             $filename,
             $filepath,
@@ -59,14 +63,14 @@ class MigrationAnalyzer implements MigrationAnalyzerContract
             $dmlOperations,
             $rawSql,
             new DependencyInfo(
-                $dependencies['requires'] ?? [],
-                $dependencies['depends_on'] ?? [],
-                $dependencies['foreign_keys'] ?? [],
+                $dependencies['requires'],
+                $dependencies['depends_on'],
+                $dependencies['foreign_keys'],
             ),
-            $this->ddlParser->extractColumns($content),
-            $this->ddlParser->extractIndexes($content),
+            $columns,
+            $indexes,
             $foreignKeys,
-            $this->ddlParser->extractMethodsUsed($content),
+            $methodsUsed,
             $this->dmlParser->hasDataModifications($content),
             $this->complexityCalculator->calculate(
                 $tables,

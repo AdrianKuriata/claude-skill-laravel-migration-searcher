@@ -88,4 +88,11 @@ class PathValidatorTest extends TestCase
         $path = $this->basePath . '/a/b/../../../../../../etc/passwd';
         $this->assertFalse($this->validator->isWithinBasePath($path));
     }
+
+    public function testReturnsFalseWhenBasePathDeletedAfterConstruction(): void
+    {
+        rmdir($this->basePath);
+        $this->assertFalse($this->validator->isWithinBasePath($this->basePath . '/output'));
+        mkdir($this->basePath, 0755, true);
+    }
 }

@@ -11,6 +11,7 @@ use DevSite\LaravelMigrationSearcher\Enums\DdlCategory;
 
 class DdlParser implements DdlParserContract
 {
+    /** @var list<string> */
     protected const array BLUEPRINT_METHODS = [
         'id', 'foreignId', 'bigIncrements', 'bigInteger', 'binary', 'boolean',
         'char', 'dateTimeTz', 'dateTime', 'date', 'decimal', 'double',
@@ -30,6 +31,7 @@ class DdlParser implements DdlParserContract
         'dropPrimary', 'dropForeign',
     ];
 
+    /** @var array<string, list<string>> */
     protected const array CATEGORIES = [
         'column_create' => [
             'id', 'string', 'integer', 'text', 'boolean', 'timestamp', 'datetime',
@@ -42,19 +44,20 @@ class DdlParser implements DdlParserContract
         'foreign_key_drop' => ['dropForeign'],
     ];
 
+    /** @var list<string> */
     protected const array COLUMN_TYPES = [
         'string', 'integer', 'bigInteger', 'text', 'boolean', 'timestamp',
         'datetime', 'date', 'decimal', 'float', 'json', 'enum', 'uuid',
         'foreignId', 'id', 'increments', 'bigIncrements',
     ];
 
-    /** @return DdlOperation[] */
+    /** @return list<DdlOperation> */
     public function parse(string $content): array
     {
         return $this->extractDDLOperations($content);
     }
 
-    /** @return DdlOperation[] */
+    /** @return list<DdlOperation> */
     public function extractDDLOperations(string $content): array
     {
         $operations = [];
@@ -87,6 +90,7 @@ class DdlParser implements DdlParserContract
         return DdlCategory::OTHER;
     }
 
+    /** @return string[] */
     public function parseMethodParams(string $params): array
     {
         $params = trim($params);
@@ -119,6 +123,7 @@ class DdlParser implements DdlParserContract
         return $columns;
     }
 
+    /** @return string[] */
     public function extractColumnModifiers(string $columnDefinition): array
     {
         $modifiers = [];
@@ -145,7 +150,7 @@ class DdlParser implements DdlParserContract
         return $modifiers;
     }
 
-    /** @return IndexDefinition[] */
+    /** @return list<IndexDefinition> */
     public function extractIndexes(string $content): array
     {
         $indexes = [];
@@ -165,7 +170,7 @@ class DdlParser implements DdlParserContract
         return $indexes;
     }
 
-    /** @return ForeignKeyDefinition[] */
+    /** @return list<ForeignKeyDefinition> */
     public function extractForeignKeys(string $content): array
     {
         $foreignKeys = [];
@@ -188,7 +193,7 @@ class DdlParser implements DdlParserContract
         return $foreignKeys;
     }
 
-    /** @return string[] */
+    /** @return list<string> */
     public function extractMethodsUsed(string $content): array
     {
         $methods = [];

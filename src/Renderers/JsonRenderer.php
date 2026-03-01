@@ -11,31 +11,37 @@ class JsonRenderer implements Renderer
         return 'json';
     }
 
+    /** @param array<string, mixed> $data */
     public function renderFullIndex(array $data): string
     {
         return $this->encode($data);
     }
 
+    /** @param array<string, mixed> $data */
     public function renderByTypeIndex(array $data): string
     {
         return $this->encode($data);
     }
 
+    /** @param array<string, mixed> $data */
     public function renderByTableIndex(array $data): string
     {
         return $this->encode($data);
     }
 
+    /** @param array<string, mixed> $data */
     public function renderByOperationIndex(array $data): string
     {
         return $this->encode($data);
     }
 
+    /** @param array<string, mixed> $data */
     public function renderStats(array $data): string
     {
         return $this->encode($data);
     }
 
+    /** @param array<string, mixed> $data */
     private function encode(array $data): string
     {
         return json_encode(

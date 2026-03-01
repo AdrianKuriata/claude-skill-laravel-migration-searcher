@@ -7,8 +7,10 @@ use Illuminate\Contracts\Support\Arrayable;
 use ReflectionClass;
 use ReflectionProperty;
 
+/** @implements Arrayable<string, mixed> */
 abstract readonly class BaseDTO implements Arrayable
 {
+    /** @return array<string, mixed> */
     public function toArray(): array
     {
         $reflection = new ReflectionClass($this);
@@ -16,7 +18,7 @@ abstract readonly class BaseDTO implements Arrayable
         $result = [];
 
         foreach ($properties as $property) {
-            $key = strtolower(preg_replace('/[A-Z]/', '_$0', $property->getName()));
+            $key = strtolower((string) preg_replace('/[A-Z]/', '_$0', $property->getName()));
             $value = $property->getValue($this);
 
             $result[$key] = $this->convertValue($value);

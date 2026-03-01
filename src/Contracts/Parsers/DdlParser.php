@@ -9,18 +9,18 @@ use DevSite\LaravelMigrationSearcher\DTOs\IndexDefinition;
 
 interface DdlParser extends ContentParser
 {
-    /** @return DdlOperation[] */
+    /** @return list<DdlOperation> */
     public function parse(string $content): array;
 
     /** @return array<string, ColumnDefinition> */
     public function extractColumns(string $content): array;
 
-    /** @return IndexDefinition[] */
+    /** @return list<IndexDefinition> */
     public function extractIndexes(string $content): array;
 
-    /** @return ForeignKeyDefinition[] */
+    /** @return list<ForeignKeyDefinition> */
     public function extractForeignKeys(string $content): array;
 
-    /** @return string[] */
+    /** @return list<string> */
     public function extractMethodsUsed(string $content): array;
 }

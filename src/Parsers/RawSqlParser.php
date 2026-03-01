@@ -9,13 +9,13 @@ use DevSite\LaravelMigrationSearcher\Enums\SqlOperationType;
 
 class RawSqlParser implements RawSqlParserContract
 {
-    /** @return RawSqlStatement[] */
+    /** @return list<RawSqlStatement> */
     public function parse(string $content): array
     {
         return $this->extractRawSQL($content);
     }
 
-    /** @return RawSqlStatement[] */
+    /** @return list<RawSqlStatement> */
     public function extractRawSQL(string $content): array
     {
         $sql = [];
@@ -70,7 +70,7 @@ class RawSqlParser implements RawSqlParserContract
     public function formatSQL(string $sql): string
     {
         $sql = trim($sql);
-        $sql = preg_replace('/\s+/', ' ', $sql);
+        $sql = (string) preg_replace('/\s+/', ' ', $sql);
 
         if (strlen($sql) > 500) {
             $sql = substr($sql, 0, 500) . '... [truncated]';

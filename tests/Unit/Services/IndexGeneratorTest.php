@@ -39,6 +39,26 @@ class IndexGeneratorTest extends TestCase
         parent::tearDown();
     }
 
+    /** @param array<string, mixed> $overrides */
+    protected function sampleDmlOperation(array $overrides = []): array
+    {
+        return array_merge([
+            'type' => 'UPDATE',
+            'table' => null,
+            'model' => null,
+            'variable' => null,
+            'relation' => null,
+            'method' => null,
+            'note' => null,
+            'data_preview' => null,
+            'where_conditions' => [],
+            'columns_updated' => [],
+            'has_db_raw' => false,
+            'db_raw_expressions' => [],
+            'operations_in_loop' => [],
+        ], $overrides);
+    }
+
     protected function sampleMigrations(): array
     {
         return [
@@ -61,6 +81,8 @@ class IndexGeneratorTest extends TestCase
                 'dml_operations' => [],
                 'raw_sql' => [],
                 'dependencies' => [
+                    'requires' => [],
+                    'depends_on' => [],
                     'foreign_keys' => [
                         ['column' => 'role_id', 'references' => 'id', 'on_table' => 'roles'],
                     ],
@@ -100,7 +122,11 @@ class IndexGeneratorTest extends TestCase
                     ],
                 ],
                 'raw_sql' => [],
-                'dependencies' => [],
+                'dependencies' => [
+                    'requires' => [],
+                    'depends_on' => [],
+                    'foreign_keys' => [],
+                ],
                 'columns' => [],
                 'indexes' => [],
                 'foreign_keys' => [],
@@ -125,7 +151,11 @@ class IndexGeneratorTest extends TestCase
                         'operation' => 'CREATE',
                     ],
                 ],
-                'dependencies' => [],
+                'dependencies' => [
+                    'requires' => [],
+                    'depends_on' => [],
+                    'foreign_keys' => [],
+                ],
                 'columns' => [],
                 'indexes' => [],
                 'foreign_keys' => [],
@@ -322,7 +352,11 @@ class IndexGeneratorTest extends TestCase
                 'ddl_operations' => [],
                 'dml_operations' => [],
                 'raw_sql' => [],
-                'dependencies' => [],
+                'dependencies' => [
+                    'requires' => [],
+                    'depends_on' => [],
+                    'foreign_keys' => [],
+                ],
                 'columns' => [],
                 'indexes' => [],
                 'foreign_keys' => [],
@@ -369,7 +403,11 @@ class IndexGeneratorTest extends TestCase
                 'ddl_operations' => [],
                 'dml_operations' => [],
                 'raw_sql' => [],
-                'dependencies' => [],
+                'dependencies' => [
+                    'requires' => [],
+                    'depends_on' => [],
+                    'foreign_keys' => [],
+                ],
                 'columns' => [],
                 'indexes' => [],
                 'foreign_keys' => [],
@@ -403,7 +441,11 @@ class IndexGeneratorTest extends TestCase
                 'ddl_operations' => [],
                 'dml_operations' => [],
                 'raw_sql' => [],
-                'dependencies' => [],
+                'dependencies' => [
+                    'requires' => [],
+                    'depends_on' => [],
+                    'foreign_keys' => [],
+                ],
                 'columns' => ['key' => ['type' => 'string', 'modifiers' => []]],
                 'indexes' => [],
                 'foreign_keys' => [],
@@ -423,31 +465,31 @@ class IndexGeneratorTest extends TestCase
                 ],
                 'ddl_operations' => [],
                 'dml_operations' => [
-                    [
+                    $this->sampleDmlOperation([
                         'type' => 'INSERT',
                         'model' => 'Post',
                         'method' => 'Eloquent::create',
                         'note' => 'Static Model::create() call',
-                    ],
-                    [
+                    ]),
+                    $this->sampleDmlOperation([
                         'type' => 'UPDATE/INSERT',
                         'variable' => '$post',
                         'method' => 'Eloquent->save()',
                         'note' => 'Model save - may be INSERT or UPDATE',
-                    ],
-                    [
+                    ]),
+                    $this->sampleDmlOperation([
                         'type' => 'INSERT',
                         'variable' => '$user',
                         'relation' => 'posts',
                         'method' => 'Eloquent->relation()->create()',
                         'note' => 'Record creation through posts relationship',
-                    ],
-                    [
+                    ]),
+                    $this->sampleDmlOperation([
                         'type' => 'LOOP',
                         'method' => 'foreach',
                         'operations_in_loop' => ['save() na $item', 'delete()'],
                         'note' => 'Loop operations: save(), delete()',
-                    ],
+                    ]),
                 ],
                 'raw_sql' => [],
                 'dependencies' => [
@@ -484,7 +526,11 @@ class IndexGeneratorTest extends TestCase
                     ],
                 ],
                 'raw_sql' => [],
-                'dependencies' => [],
+                'dependencies' => [
+                    'requires' => [],
+                    'depends_on' => [],
+                    'foreign_keys' => [],
+                ],
                 'columns' => [],
                 'indexes' => [],
                 'foreign_keys' => [],
@@ -515,7 +561,11 @@ class IndexGeneratorTest extends TestCase
                     ],
                 ],
                 'raw_sql' => [],
-                'dependencies' => [],
+                'dependencies' => [
+                    'requires' => [],
+                    'depends_on' => [],
+                    'foreign_keys' => [],
+                ],
                 'columns' => [],
                 'indexes' => [],
                 'foreign_keys' => [],
@@ -538,7 +588,11 @@ class IndexGeneratorTest extends TestCase
                 ],
                 'dml_operations' => [],
                 'raw_sql' => [],
-                'dependencies' => [],
+                'dependencies' => [
+                    'requires' => [],
+                    'depends_on' => [],
+                    'foreign_keys' => [],
+                ],
                 'columns' => ['bio' => ['type' => 'string', 'modifiers' => ['nullable']]],
                 'indexes' => [],
                 'foreign_keys' => [],
