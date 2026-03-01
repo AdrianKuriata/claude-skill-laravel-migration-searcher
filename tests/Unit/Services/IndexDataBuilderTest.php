@@ -2,7 +2,7 @@
 
 namespace Tests\Unit\Services;
 
-use DevSite\LaravelMigrationSearcher\Contracts\IndexDataBuilder as IndexDataBuilderContract;
+use DevSite\LaravelMigrationSearcher\Contracts\Services\IndexDataBuilder as IndexDataBuilderContract;
 use DevSite\LaravelMigrationSearcher\Services\IndexDataBuilder;
 use Tests\TestCase;
 

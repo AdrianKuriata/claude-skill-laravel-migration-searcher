@@ -2,15 +2,20 @@
 
 namespace DevSite\LaravelMigrationSearcher\Parsers;
 
-use DevSite\LaravelMigrationSearcher\Contracts\ContentParser;
+use DevSite\LaravelMigrationSearcher\Contracts\Parsers\RawSqlParser as RawSqlParserContract;
+use DevSite\LaravelMigrationSearcher\DTOs\RawSqlStatement;
+use DevSite\LaravelMigrationSearcher\Enums\RawSqlType;
+use DevSite\LaravelMigrationSearcher\Enums\SqlOperationType;
 
-class RawSqlParser implements ContentParser
+class RawSqlParser implements RawSqlParserContract
 {
+    /** @return RawSqlStatement[] */
     public function parse(string $content): array
     {
         return $this->extractRawSQL($content);
     }
 
+    /** @return RawSqlStatement[] */
     public function extractRawSQL(string $content): array
     {
         $sql = [];
@@ -18,44 +23,44 @@ class RawSqlParser implements ContentParser
         if (preg_match_all('/DB::statement\s*\(\s*(["\'])(.+?)\1\s*(?:,|\))/s', $content, $matches, PREG_SET_ORDER)) {
             foreach ($matches as $match) {
                 $statement = $match[2];
-                $sql[] = [
-                    'type' => 'statement',
-                    'sql' => $this->formatSQL($statement),
-                    'operation' => $this->detectSQLOperation($statement),
-                ];
+                $sql[] = new RawSqlStatement(
+                    RawSqlType::STATEMENT,
+                    $this->formatSQL($statement),
+                    $this->detectSQLOperation($statement),
+                );
             }
         }
 
         if (preg_match_all('/DB::unprepared\s*\(\s*(["\'])(.+?)\1\s*(?:,|\))/s', $content, $matches, PREG_SET_ORDER)) {
             foreach ($matches as $match) {
                 $statement = $match[2];
-                $sql[] = [
-                    'type' => 'unprepared',
-                    'sql' => $this->formatSQL($statement),
-                    'operation' => $this->detectSQLOperation($statement),
-                ];
+                $sql[] = new RawSqlStatement(
+                    RawSqlType::UNPREPARED,
+                    $this->formatSQL($statement),
+                    $this->detectSQLOperation($statement),
+                );
             }
         }
 
         if (preg_match_all('/DB::raw\s*\(\s*(["\'])(.+?)\1\s*\)/s', $content, $matches, PREG_SET_ORDER)) {
             foreach ($matches as $match) {
                 $statement = $match[2];
-                $sql[] = [
-                    'type' => 'raw',
-                    'sql' => $this->formatSQL($statement),
-                    'operation' => 'EXPRESSION',
-                ];
+                $sql[] = new RawSqlStatement(
+                    RawSqlType::RAW,
+                    $this->formatSQL($statement),
+                    SqlOperationType::EXPRESSION,
+                );
             }
         }
 
         if (preg_match_all('/<<<(["\']?)SQL\1\s*(.+?)\s*SQL/s', $content, $matches, PREG_SET_ORDER)) {
             foreach ($matches as $match) {
                 $statement = $match[2];
-                $sql[] = [
-                    'type' => 'heredoc',
-                    'sql' => $this->formatSQL($statement),
-                    'operation' => $this->detectSQLOperation($statement),
-                ];
+                $sql[] = new RawSqlStatement(
+                    RawSqlType::HEREDOC,
+                    $this->formatSQL($statement),
+                    $this->detectSQLOperation($statement),
+                );
             }
         }
 
@@ -74,35 +79,35 @@ class RawSqlParser implements ContentParser
         return $sql;
     }
 
-    public function detectSQLOperation(string $sql): string
+    public function detectSQLOperation(string $sql): SqlOperationType
     {
         $sql = strtoupper(trim($sql));
 
-        if (strpos($sql, 'SELECT') === 0) {
-            return 'SELECT';
+        if (str_starts_with($sql, 'SELECT')) {
+            return SqlOperationType::SELECT;
         }
-        if (strpos($sql, 'INSERT') === 0) {
-            return 'INSERT';
+        if (str_starts_with($sql, 'INSERT')) {
+            return SqlOperationType::INSERT;
         }
-        if (strpos($sql, 'UPDATE') === 0) {
-            return 'UPDATE';
+        if (str_starts_with($sql, 'UPDATE')) {
+            return SqlOperationType::UPDATE;
         }
-        if (strpos($sql, 'DELETE') === 0) {
-            return 'DELETE';
+        if (str_starts_with($sql, 'DELETE')) {
+            return SqlOperationType::DELETE;
         }
-        if (strpos($sql, 'CREATE') === 0) {
-            return 'CREATE';
+        if (str_starts_with($sql, 'CREATE')) {
+            return SqlOperationType::CREATE;
         }
-        if (strpos($sql, 'ALTER') === 0) {
-            return 'ALTER';
+        if (str_starts_with($sql, 'ALTER')) {
+            return SqlOperationType::ALTER;
         }
-        if (strpos($sql, 'DROP') === 0) {
-            return 'DROP';
+        if (str_starts_with($sql, 'DROP')) {
+            return SqlOperationType::DROP;
         }
-        if (strpos($sql, 'TRUNCATE') === 0) {
-            return 'TRUNCATE';
+        if (str_starts_with($sql, 'TRUNCATE')) {
+            return SqlOperationType::TRUNCATE;
         }
 
-        return 'OTHER';
+        return SqlOperationType::OTHER;
     }
 }

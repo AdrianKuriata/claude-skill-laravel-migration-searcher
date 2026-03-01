@@ -2,6 +2,8 @@
 
 namespace Tests\Unit\Parsers;
 
+use DevSite\LaravelMigrationSearcher\DTOs\TableInfo;
+use DevSite\LaravelMigrationSearcher\Enums\TableOperation;
 use DevSite\LaravelMigrationSearcher\Parsers\TableDetector;
 use PHPUnit\Framework\TestCase;
 
@@ -21,7 +23,8 @@ class TableDetectorTest extends TestCase
         $tables = $this->detector->parse($content);
 
         $this->assertArrayHasKey('users', $tables);
-        $this->assertSame('CREATE', $tables['users']['operation']);
+        $this->assertInstanceOf(TableInfo::class, $tables['users']);
+        $this->assertSame(TableOperation::CREATE, $tables['users']->operation);
     }
 
     public function testDetectsSchemaTable(): void
@@ -30,7 +33,7 @@ class TableDetectorTest extends TestCase
         $tables = $this->detector->parse($content);
 
         $this->assertArrayHasKey('users', $tables);
-        $this->assertSame('ALTER', $tables['users']['operation']);
+        $this->assertSame(TableOperation::ALTER, $tables['users']->operation);
     }
 
     public function testDetectsSchemaDropIfExists(): void
@@ -39,7 +42,7 @@ class TableDetectorTest extends TestCase
         $tables = $this->detector->parse($content);
 
         $this->assertArrayHasKey('legacy', $tables);
-        $this->assertSame('DROP', $tables['legacy']['operation']);
+        $this->assertSame(TableOperation::DROP, $tables['legacy']->operation);
     }
 
     public function testDetectsSchemaDrop(): void
@@ -48,7 +51,7 @@ class TableDetectorTest extends TestCase
         $tables = $this->detector->parse($content);
 
         $this->assertArrayHasKey('legacy', $tables);
-        $this->assertSame('DROP', $tables['legacy']['operation']);
+        $this->assertSame(TableOperation::DROP, $tables['legacy']->operation);
     }
 
     public function testDetectsSchemaRename(): void
@@ -57,7 +60,7 @@ class TableDetectorTest extends TestCase
         $tables = $this->detector->parse($content);
 
         $this->assertArrayHasKey('orders', $tables);
-        $this->assertSame('RENAME', $tables['orders']['operation']);
+        $this->assertSame(TableOperation::RENAME, $tables['orders']->operation);
     }
 
     public function testDetectsDbTable(): void
@@ -66,7 +69,7 @@ class TableDetectorTest extends TestCase
         $tables = $this->detector->parse($content);
 
         $this->assertArrayHasKey('users', $tables);
-        $this->assertSame('DATA', $tables['users']['operation']);
+        $this->assertSame(TableOperation::DATA, $tables['users']->operation);
     }
 
     public function testSchemaCreateTakesPrecedenceOverDbTable(): void
@@ -74,7 +77,7 @@ class TableDetectorTest extends TestCase
         $content = "Schema::create('items', function (\$table) { \$table->id(); });\nDB::table('items')->insert([]);";
         $tables = $this->detector->parse($content);
 
-        $this->assertSame('CREATE', $tables['items']['operation']);
+        $this->assertSame(TableOperation::CREATE, $tables['items']->operation);
     }
 
     public function testSchemaTableNotOverriddenByDbTable(): void
@@ -82,7 +85,7 @@ class TableDetectorTest extends TestCase
         $content = "Schema::table('users', function (\$table) { \$table->string('x'); });\nDB::table('users')->get();";
         $tables = $this->detector->parse($content);
 
-        $this->assertSame('ALTER', $tables['users']['operation']);
+        $this->assertSame(TableOperation::ALTER, $tables['users']->operation);
     }
 
     public function testEmptyContentReturnsNoTables(): void

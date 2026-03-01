@@ -1,6 +1,6 @@
 <?php
 
-namespace DevSite\LaravelMigrationSearcher\Contracts;
+namespace DevSite\LaravelMigrationSearcher\Contracts\Services;
 
 use DevSite\LaravelMigrationSearcher\DTOs\MigrationAnalysisResult;
 

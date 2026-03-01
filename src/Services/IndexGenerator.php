@@ -2,56 +2,42 @@
 
 namespace DevSite\LaravelMigrationSearcher\Services;
 
-use DevSite\LaravelMigrationSearcher\Contracts\FileWriter;
-use DevSite\LaravelMigrationSearcher\Contracts\IndexDataBuilder as IndexDataBuilderContract;
-use DevSite\LaravelMigrationSearcher\Contracts\IndexGenerator as IndexGeneratorContract;
-use DevSite\LaravelMigrationSearcher\Contracts\Renderer;
+use DevSite\LaravelMigrationSearcher\Contracts\Writers\FileWriter;
+use DevSite\LaravelMigrationSearcher\Contracts\Services\IndexDataBuilder as IndexDataBuilderContract;
+use DevSite\LaravelMigrationSearcher\Contracts\Services\IndexGenerator as IndexGeneratorContract;
+use DevSite\LaravelMigrationSearcher\Contracts\Renderers\Renderer;
 
 class IndexGenerator implements IndexGeneratorContract
 {
-    protected array $migrations = [];
-    protected string $outputPath;
-    protected Renderer $renderer;
-    protected IndexDataBuilderContract $dataBuilder;
-    protected FileWriter $writer;
-
     public function __construct(
-        string $outputPath,
-        Renderer $renderer,
-        IndexDataBuilderContract $dataBuilder,
-        FileWriter $writer,
+        protected string $outputPath,
+        protected Renderer $renderer,
+        protected IndexDataBuilderContract $dataBuilder,
+        protected FileWriter $writer,
     ) {
         $this->outputPath = rtrim($outputPath, '/');
-        $this->renderer = $renderer;
-        $this->dataBuilder = $dataBuilder;
-        $this->writer = $writer;
     }
 
-    public function setMigrations(array $migrations): void
-    {
-        $this->migrations = $migrations;
-    }
-
-    public function generateAll(): array
+    public function generateAll(array $migrations): array
     {
         $this->writer->ensureDirectory($this->outputPath);
 
         $ext = $this->renderer->getFileExtension();
         $generated = [];
 
-        $fullData = $this->dataBuilder->buildFullIndex($this->migrations);
+        $fullData = $this->dataBuilder->buildFullIndex($migrations);
         $generated['full'] = $this->writeIndex("index-full.{$ext}", $this->renderer->renderFullIndex($fullData));
 
-        $byTypeData = $this->dataBuilder->buildByTypeIndex($this->migrations);
+        $byTypeData = $this->dataBuilder->buildByTypeIndex($migrations);
         $generated['by_type'] = $this->writeIndex("index-by-type.{$ext}", $this->renderer->renderByTypeIndex($byTypeData));
 
-        $byTableData = $this->dataBuilder->buildByTableIndex($this->migrations);
+        $byTableData = $this->dataBuilder->buildByTableIndex($migrations);
         $generated['by_table'] = $this->writeIndex("index-by-table.{$ext}", $this->renderer->renderByTableIndex($byTableData));
 
-        $byOperationData = $this->dataBuilder->buildByOperationIndex($this->migrations);
+        $byOperationData = $this->dataBuilder->buildByOperationIndex($migrations);
         $generated['by_operation'] = $this->writeIndex("index-by-operation.{$ext}", $this->renderer->renderByOperationIndex($byOperationData));
 
-        $statsData = $this->dataBuilder->buildStats($this->migrations);
+        $statsData = $this->dataBuilder->buildStats($migrations);
         $generated['stats'] = $this->writeIndex("stats.{$ext}", $this->renderer->renderStats($statsData));
 
         return $generated;

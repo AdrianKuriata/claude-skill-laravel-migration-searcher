@@ -2,7 +2,7 @@
 
 namespace DevSite\LaravelMigrationSearcher\Services;
 
-use DevSite\LaravelMigrationSearcher\Contracts\IndexDataBuilder as IndexDataBuilderContract;
+use DevSite\LaravelMigrationSearcher\Contracts\Services\IndexDataBuilder as IndexDataBuilderContract;
 
 class IndexDataBuilder implements IndexDataBuilderContract
 {

@@ -2,13 +2,17 @@
 
 namespace DevSite\LaravelMigrationSearcher\Services;
 
-use DevSite\LaravelMigrationSearcher\Contracts\PathValidator as PathValidatorContract;
+use DevSite\LaravelMigrationSearcher\Contracts\Services\PathValidator as PathValidatorContract;
+use DevSite\LaravelMigrationSearcher\Exceptions\InvalidPathException;
 
 class PathValidator implements PathValidatorContract
 {
     public function __construct(
         protected string $basePath,
     ) {
+        if (empty($basePath) || !is_dir($basePath)) {
+            throw InvalidPathException::invalidBasePath($basePath);
+        }
     }
 
     public function isWithinBasePath(string $path): bool
@@ -30,7 +34,7 @@ class PathValidator implements PathValidatorContract
         }
     }
 
-    public function normalize(string $path): string
+    protected function normalize(string $path): string
     {
         $isAbsolute = str_starts_with($path, '/');
         $parts = array_filter(explode('/', $path), fn ($part) => $part !== '' && $part !== '.');

@@ -2,15 +2,16 @@
 
 namespace DevSite\LaravelMigrationSearcher\Renderers;
 
-use DevSite\LaravelMigrationSearcher\Contracts\Renderer;
+use DevSite\LaravelMigrationSearcher\Contracts\Renderers\MarkdownMigrationFormatter as MarkdownMigrationFormatterContract;
+use DevSite\LaravelMigrationSearcher\Contracts\Renderers\Renderer;
+use DevSite\LaravelMigrationSearcher\Contracts\Services\TextSanitizer;
 
 class MarkdownRenderer implements Renderer
 {
-    private MarkdownMigrationFormatter $formatter;
-
-    public function __construct(?MarkdownMigrationFormatter $formatter = null)
-    {
-        $this->formatter = $formatter ?? new MarkdownMigrationFormatter();
+    public function __construct(
+        private readonly MarkdownMigrationFormatterContract $formatter,
+        private readonly TextSanitizer $sanitizer,
+    ) {
     }
 
     public function getFileExtension(): string
@@ -44,7 +45,7 @@ class MarkdownRenderer implements Renderer
         }
 
         foreach ($data['groups'] as $type => $group) {
-            $safeType = $this->formatter->escapeHtml($type);
+            $safeType = $this->sanitizer->sanitize($type);
 
             $content .= "## {$safeType}\n\n";
             $content .= "**Count:** {$group['count']}\n\n";
@@ -66,16 +67,16 @@ class MarkdownRenderer implements Renderer
         $content .= "**Generated:** {$data['generated_at']}\n\n";
 
         foreach ($data['tables'] as $table => $tableData) {
-            $safeTable = $this->formatter->escapeHtml($table);
+            $safeTable = $this->sanitizer->sanitize($table);
             $content .= "## Table: `{$safeTable}`\n\n";
             $content .= "**Number of migrations:** {$tableData['count']}\n\n";
 
             foreach ($tableData['migrations'] as $migration) {
-                $safeFilename = $this->formatter->escapeHtml($migration['filename']);
-                $safeOp = $this->formatter->escapeHtml($migration['table_operation']);
-                $safeType = $this->formatter->escapeHtml($migration['type']);
-                $safePath = $this->formatter->escapeHtml($migration['relative_path']);
-                $safeTimestamp = $this->formatter->escapeHtml($migration['timestamp']);
+                $safeFilename = $this->sanitizer->sanitize($migration['filename']);
+                $safeOp = $this->sanitizer->sanitize($migration['table_operation']);
+                $safeType = $this->sanitizer->sanitize($migration['type']);
+                $safePath = $this->sanitizer->sanitize($migration['relative_path']);
+                $safeTimestamp = $this->sanitizer->sanitize($migration['timestamp']);
 
                 $content .= "### [{$safeOp}] {$safeFilename}\n\n";
                 $content .= "- **Migration type:** {$safeType}\n";
@@ -83,7 +84,7 @@ class MarkdownRenderer implements Renderer
                 $content .= "- **Timestamp:** {$safeTimestamp}\n";
 
                 if (!empty($migration['columns'])) {
-                    $safeColumns = array_map([$this->formatter, 'escapeHtml'], array_keys($migration['columns']));
+                    $safeColumns = array_map([$this->sanitizer, 'sanitize'], array_keys($migration['columns']));
                     $content .= "- **Columns:** " . implode(', ', $safeColumns) . "\n";
                 }
 
@@ -116,10 +117,10 @@ class MarkdownRenderer implements Renderer
 
             if ($opData['count'] > 0) {
                 foreach ($opData['migrations'] as $migration) {
-                    $safeFilename = $this->formatter->escapeHtml($migration['filename']);
-                    $safeTargetTable = $this->formatter->escapeHtml($migration['target_table']);
-                    $safeType = $this->formatter->escapeHtml($migration['type']);
-                    $safePath = $this->formatter->escapeHtml($migration['relative_path']);
+                    $safeFilename = $this->sanitizer->sanitize($migration['filename']);
+                    $safeTargetTable = $this->sanitizer->sanitize($migration['target_table']);
+                    $safeType = $this->sanitizer->sanitize($migration['type']);
+                    $safePath = $this->sanitizer->sanitize($migration['relative_path']);
 
                     $content .= "### {$safeFilename}\n\n";
                     $content .= "- **Table:** `{$safeTargetTable}`\n";
@@ -127,23 +128,23 @@ class MarkdownRenderer implements Renderer
                     $content .= "- **Path:** `{$safePath}`\n";
 
                     if ($op === 'ALTER' && !empty($migration['columns'])) {
-                        $safeColumns = array_map([$this->formatter, 'escapeHtml'], array_keys($migration['columns']));
+                        $safeColumns = array_map([$this->sanitizer, 'sanitize'], array_keys($migration['columns']));
                         $content .= "- **Affected columns:** " . implode(', ', $safeColumns) . "\n";
                     }
 
                     if ($op === 'DATA' && !empty($migration['dml_operations'])) {
                         $content .= "- **DML Operations:**\n";
                         foreach ($migration['dml_operations'] as $dml) {
-                            $safeDmlType = $this->formatter->escapeHtml($dml['type']);
-                            $safeDmlTable = $this->formatter->escapeHtml($dml['table'] ?? $dml['model'] ?? 'unknown');
+                            $safeDmlType = $this->sanitizer->sanitize($dml['type']);
+                            $safeDmlTable = $this->sanitizer->sanitize($dml['table'] ?? $dml['model'] ?? 'unknown');
                             $content .= "  - **{$safeDmlType}** on `{$safeDmlTable}`";
 
                             if (!empty($dml['where_conditions'])) {
-                                $safeConditions = array_map([$this->formatter, 'escapeHtml'], $dml['where_conditions']);
+                                $safeConditions = array_map([$this->sanitizer, 'sanitize'], $dml['where_conditions']);
                                 $content .= " WHERE: " . implode(' AND ', $safeConditions);
                             }
                             if (!empty($dml['columns_updated'])) {
-                                $safeUpdated = array_map([$this->formatter, 'escapeHtml'], $dml['columns_updated']);
+                                $safeUpdated = array_map([$this->sanitizer, 'sanitize'], $dml['columns_updated']);
                                 $content .= " (columns: " . implode(', ', $safeUpdated) . ")";
                             }
                             $content .= "\n";
@@ -162,9 +163,9 @@ class MarkdownRenderer implements Renderer
         $content .= "**Number of migrations with raw SQL:** {$rawSql['count']}\n\n";
 
         foreach ($rawSql['migrations'] as $migration) {
-            $safeFilename = $this->formatter->escapeHtml($migration['filename']);
-            $safeType = $this->formatter->escapeHtml($migration['type']);
-            $safePath = $this->formatter->escapeHtml($migration['relative_path']);
+            $safeFilename = $this->sanitizer->sanitize($migration['filename']);
+            $safeType = $this->sanitizer->sanitize($migration['type']);
+            $safePath = $this->sanitizer->sanitize($migration['relative_path']);
 
             $content .= "### {$safeFilename}\n\n";
             $content .= "- **Migration type:** {$safeType}\n";
@@ -172,9 +173,9 @@ class MarkdownRenderer implements Renderer
             $content .= "- **Number of statements:** " . count($migration['raw_sql']) . "\n\n";
 
             foreach ($migration['raw_sql'] as $sql) {
-                $safeOperation = $this->formatter->escapeHtml($sql['operation'] ?? 'unknown');
-                $safeSqlType = $this->formatter->escapeHtml($sql['type']);
-                $safeSql = $this->formatter->escapeHtml($sql['sql']);
+                $safeOperation = $this->sanitizer->sanitize($sql['operation'] ?? 'unknown');
+                $safeSqlType = $this->sanitizer->sanitize($sql['type']);
+                $safeSql = $this->sanitizer->sanitize($sql['sql']);
                 $content .= "**[{$safeOperation}]** ({$safeSqlType}):\n";
                 $content .= "```sql\n{$safeSql}\n```\n\n";
             }
@@ -192,7 +193,8 @@ class MarkdownRenderer implements Renderer
         $content .= "## By Type\n\n";
         if (!empty($data['by_type'])) {
             foreach ($data['by_type'] as $type => $count) {
-                $content .= "- **{$type}:** {$count}\n";
+                $safeType = $this->sanitizer->sanitize($type);
+                $content .= "- **{$safeType}:** {$count}\n";
             }
         }
         $content .= "\n";
@@ -210,11 +212,12 @@ class MarkdownRenderer implements Renderer
             $content .= "## Tables (top " . count($data['tables']) . ")\n\n";
             foreach ($data['tables'] as $table => $info) {
                 $ops = implode(', ', array_map(
-                    fn ($op, $count) => "{$op}: {$count}",
+                    fn ($op, $count) => "{$this->sanitizer->sanitize($op)}: {$count}",
                     array_keys($info['operations']),
                     array_values($info['operations'])
                 ));
-                $content .= "- **`{$table}`** — {$info['migrations_count']} migrations ({$ops})\n";
+                $safeTable = $this->sanitizer->sanitize($table);
+                $content .= "- **`{$safeTable}`** — {$info['migrations_count']} migrations ({$ops})\n";
             }
             $content .= "\n";
         }

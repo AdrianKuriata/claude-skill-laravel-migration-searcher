@@ -2,6 +2,7 @@
 
 namespace Tests\Unit\Support;
 
+use DevSite\LaravelMigrationSearcher\Exceptions\InvalidFileExtensionException;
 use DevSite\LaravelMigrationSearcher\Support\MigrationFileInfo;
 use Tests\TestCase;
 
@@ -57,5 +58,55 @@ class MigrationFileInfoTest extends TestCase
         $filepath = '/some/other/path/test.php';
 
         $this->assertSame($filepath, $this->migrationFileInfo->getRelativePath($filepath));
+    }
+
+    public function testGetFileSizeReturnsFileSize(): void
+    {
+        $tmpFile = tempnam(sys_get_temp_dir(), 'mfi_test_') . '.php';
+        file_put_contents($tmpFile, 'hello world');
+
+        try {
+            $this->assertSame(11, $this->migrationFileInfo->getFileSize($tmpFile));
+        } finally {
+            @unlink($tmpFile);
+        }
+    }
+
+    public function testGetContentsReturnsFileContents(): void
+    {
+        $tmpFile = tempnam(sys_get_temp_dir(), 'mfi_test_') . '.php';
+        file_put_contents($tmpFile, '<?php echo 1;');
+
+        try {
+            $this->assertSame('<?php echo 1;', $this->migrationFileInfo->getContents($tmpFile));
+        } finally {
+            @unlink($tmpFile);
+        }
+    }
+
+    public function testGetContentsThrowsForNonPhpFile(): void
+    {
+        $tmpFile = tempnam(sys_get_temp_dir(), 'mfi_test_') . '.txt';
+        file_put_contents($tmpFile, 'content');
+
+        try {
+            $this->expectException(InvalidFileExtensionException::class);
+            $this->migrationFileInfo->getContents($tmpFile);
+        } finally {
+            @unlink($tmpFile);
+        }
+    }
+
+    public function testGetFileSizeThrowsForNonPhpFile(): void
+    {
+        $tmpFile = tempnam(sys_get_temp_dir(), 'mfi_test_') . '.txt';
+        file_put_contents($tmpFile, 'content');
+
+        try {
+            $this->expectException(InvalidFileExtensionException::class);
+            $this->migrationFileInfo->getFileSize($tmpFile);
+        } finally {
+            @unlink($tmpFile);
+        }
     }
 }

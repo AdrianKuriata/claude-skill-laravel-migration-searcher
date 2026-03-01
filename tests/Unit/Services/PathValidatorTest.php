@@ -2,6 +2,7 @@
 
 namespace Tests\Unit\Services;
 
+use DevSite\LaravelMigrationSearcher\Exceptions\InvalidPathException;
 use DevSite\LaravelMigrationSearcher\Services\PathValidator;
 use PHPUnit\Framework\TestCase;
 
@@ -26,39 +27,19 @@ class PathValidatorTest extends TestCase
         parent::tearDown();
     }
 
-    // ── normalize ──────────────────────────────────────────────────
-
-    public function testNormalizeAbsolutePath(): void
+    public function testThrowsExceptionForEmptyBasePath(): void
     {
-        $this->assertSame('/foo/bar', $this->validator->normalize('/foo/bar'));
+        $this->expectException(InvalidPathException::class);
+
+        new PathValidator('');
     }
 
-    public function testNormalizeRelativePath(): void
+    public function testThrowsExceptionForNonExistentBasePath(): void
     {
-        $this->assertSame('foo/bar', $this->validator->normalize('foo/bar'));
-    }
+        $this->expectException(InvalidPathException::class);
 
-    public function testNormalizeRemovesDoubleDots(): void
-    {
-        $this->assertSame('/foo/baz', $this->validator->normalize('/foo/bar/../baz'));
+        new PathValidator('/nonexistent-' . uniqid() . '/path');
     }
-
-    public function testNormalizeRemovesSingleDots(): void
-    {
-        $this->assertSame('/foo/bar', $this->validator->normalize('/foo/./bar'));
-    }
-
-    public function testNormalizeMultipleDoubleDots(): void
-    {
-        $this->assertSame('/baz', $this->validator->normalize('/foo/bar/../../baz'));
-    }
-
-    public function testNormalizeDoubleDotsBeyondRoot(): void
-    {
-        $this->assertSame('../baz', $this->validator->normalize('foo/../../baz'));
-    }
-
-    // ── isWithinBasePath ───────────────────────────────────────────
 
     public function testValidPathWithinBase(): void
     {
@@ -87,6 +68,24 @@ class PathValidatorTest extends TestCase
     public function testRootGuardPreventsInfiniteLoop(): void
     {
         $path = '/nonexistent-' . uniqid() . '/nonexistent/output';
+        $this->assertFalse($this->validator->isWithinBasePath($path));
+    }
+
+    public function testNormalizesDotsInTraversalCheck(): void
+    {
+        $path = $this->basePath . '/foo/../output';
+        $this->assertTrue($this->validator->isWithinBasePath($path));
+    }
+
+    public function testNormalizesCurrentDirInPath(): void
+    {
+        $path = $this->basePath . '/./output';
+        $this->assertTrue($this->validator->isWithinBasePath($path));
+    }
+
+    public function testMultipleDoubleDotTraversalBlocked(): void
+    {
+        $path = $this->basePath . '/a/b/../../../../../../etc/passwd';
         $this->assertFalse($this->validator->isWithinBasePath($path));
     }
 }

@@ -3,7 +3,15 @@
 namespace Tests\Unit\DTOs;
 
 use DevSite\LaravelMigrationSearcher\DTOs\BaseDTO;
+use DevSite\LaravelMigrationSearcher\DTOs\ColumnDefinition;
+use DevSite\LaravelMigrationSearcher\DTOs\DdlOperation;
+use DevSite\LaravelMigrationSearcher\DTOs\DependencyInfo;
 use DevSite\LaravelMigrationSearcher\DTOs\MigrationAnalysisResult;
+use DevSite\LaravelMigrationSearcher\DTOs\TableInfo;
+use DevSite\LaravelMigrationSearcher\Enums\DdlCategory;
+use DevSite\LaravelMigrationSearcher\Enums\TableOperation;
+use DevSite\LaravelMigrationSearcher\ValueObjects\ComplexityScore;
+use DevSite\LaravelMigrationSearcher\ValueObjects\MigrationTimestamp;
 use Illuminate\Contracts\Support\Arrayable;
 use PHPUnit\Framework\TestCase;
 
@@ -11,25 +19,27 @@ class MigrationAnalysisResultTest extends TestCase
 {
     protected function createResult(array $overrides = []): MigrationAnalysisResult
     {
-        return new MigrationAnalysisResult(...array_merge([
+        $defaults = [
             'filename' => '2024_01_15_100000_create_users_table.php',
             'filepath' => '/app/database/migrations/2024_01_15_100000_create_users_table.php',
             'relativePath' => 'database/migrations/2024_01_15_100000_create_users_table.php',
             'type' => 'default',
-            'timestamp' => '2024_01_15_100000',
+            'timestamp' => new MigrationTimestamp('2024_01_15_100000'),
             'name' => 'create_users_table',
-            'tables' => ['users' => ['operation' => 'CREATE']],
-            'ddlOperations' => [['method' => 'string', 'category' => 'column_create']],
+            'tables' => ['users' => new TableInfo(TableOperation::CREATE, [])],
+            'ddlOperations' => [new DdlOperation('string', ["'name'"], DdlCategory::COLUMN_CREATE)],
             'dmlOperations' => [],
             'rawSql' => [],
-            'dependencies' => [],
-            'columns' => ['name' => ['type' => 'string']],
+            'dependencies' => new DependencyInfo(),
+            'columns' => ['name' => new ColumnDefinition('string', [])],
             'indexes' => [],
             'foreignKeys' => [],
             'methodsUsed' => ['string', 'integer'],
             'hasDataModifications' => false,
-            'complexity' => 2,
-        ], $overrides));
+            'complexity' => new ComplexityScore(2),
+        ];
+
+        return new MigrationAnalysisResult(...array_merge($defaults, $overrides));
     }
 
     public function testExtendsBaseDTO(): void
@@ -54,19 +64,20 @@ class MigrationAnalysisResultTest extends TestCase
         $this->assertSame('/app/database/migrations/2024_01_15_100000_create_users_table.php', $result->filepath);
         $this->assertSame('database/migrations/2024_01_15_100000_create_users_table.php', $result->relativePath);
         $this->assertSame('default', $result->type);
-        $this->assertSame('2024_01_15_100000', $result->timestamp);
+        $this->assertSame('2024_01_15_100000', $result->timestamp->value);
         $this->assertSame('create_users_table', $result->name);
-        $this->assertSame(['users' => ['operation' => 'CREATE']], $result->tables);
-        $this->assertSame([['method' => 'string', 'category' => 'column_create']], $result->ddlOperations);
+        $this->assertInstanceOf(TableInfo::class, $result->tables['users']);
+        $this->assertSame(TableOperation::CREATE, $result->tables['users']->operation);
+        $this->assertInstanceOf(DdlOperation::class, $result->ddlOperations[0]);
         $this->assertSame([], $result->dmlOperations);
         $this->assertSame([], $result->rawSql);
-        $this->assertSame([], $result->dependencies);
-        $this->assertSame(['name' => ['type' => 'string']], $result->columns);
+        $this->assertInstanceOf(DependencyInfo::class, $result->dependencies);
+        $this->assertInstanceOf(ColumnDefinition::class, $result->columns['name']);
         $this->assertSame([], $result->indexes);
         $this->assertSame([], $result->foreignKeys);
         $this->assertSame(['string', 'integer'], $result->methodsUsed);
         $this->assertFalse($result->hasDataModifications);
-        $this->assertSame(2, $result->complexity);
+        $this->assertSame(2, $result->complexity->value);
     }
 
     public function testToArrayReturnsSnakeCaseKeys(): void
@@ -88,16 +99,36 @@ class MigrationAnalysisResultTest extends TestCase
         $this->assertCount(17, $array);
     }
 
-    public function testToArrayPreservesValues(): void
+    public function testToArrayConvertsNestedDtosAndEnums(): void
+    {
+        $result = $this->createResult();
+        $array = $result->toArray();
+
+        $this->assertSame('2024_01_15_100000', $array['timestamp']);
+        $this->assertSame(2, $array['complexity']);
+
+        $this->assertIsArray($array['tables']['users']);
+        $this->assertSame('CREATE', $array['tables']['users']['operation']);
+
+        $this->assertIsArray($array['ddl_operations'][0]);
+        $this->assertSame('string', $array['ddl_operations'][0]['method']);
+        $this->assertSame('column_create', $array['ddl_operations'][0]['category']);
+
+        $this->assertIsArray($array['dependencies']);
+        $this->assertSame([], $array['dependencies']['requires']);
+
+        $this->assertIsArray($array['columns']['name']);
+        $this->assertSame('string', $array['columns']['name']['type']);
+    }
+
+    public function testToArrayPreservesSimpleValues(): void
     {
         $result = $this->createResult();
         $array = $result->toArray();
 
         $this->assertSame('2024_01_15_100000_create_users_table.php', $array['filename']);
         $this->assertSame('default', $array['type']);
-        $this->assertSame(['users' => ['operation' => 'CREATE']], $array['tables']);
         $this->assertFalse($array['has_data_modifications']);
-        $this->assertSame(2, $array['complexity']);
     }
 
     public function testIsReadonly(): void

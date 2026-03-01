@@ -91,6 +91,9 @@ return [
     // Default output format: 'markdown' or 'json'
     'default_format' => 'markdown',
 
+    // Maximum file size in bytes for migration analysis (default: 5MB)
+    'max_file_size' => 5242880,
+
     // Path to SKILL.md template
     'skill_template_path' => '...',
 ];
@@ -271,14 +274,30 @@ src/
 │   └── Commands/
 │       └── IndexMigrationsCommand.php    # Constructor injection via DI
 ├── Contracts/                             # Interfaces (no Interface suffix)
-│   ├── ContentParser.php
-│   ├── FileWriter.php
-│   ├── IndexDataBuilder.php              # Data preparation contract
-│   ├── IndexGenerator.php
-│   ├── MigrationAnalyzer.php
-│   ├── PathValidator.php                 # Path security contract
-│   ├── Renderer.php                      # Output format contract
-│   └── RendererResolver.php              # Format resolution contract
+│   ├── Parsers/
+│   │   ├── ContentParser.php
+│   │   ├── DdlParser.php
+│   │   ├── DmlParser.php
+│   │   ├── RawSqlParser.php
+│   │   ├── DependencyParser.php
+│   │   └── TableDetector.php
+│   ├── Renderers/
+│   │   ├── Renderer.php                  # Output format contract
+│   │   ├── RendererResolver.php          # Format resolution contract
+│   │   └── MarkdownMigrationFormatter.php
+│   ├── Services/
+│   │   ├── MigrationAnalyzer.php
+│   │   ├── ComplexityCalculator.php
+│   │   ├── PathValidator.php             # Path security contract
+│   │   ├── IndexGenerator.php
+│   │   ├── IndexGeneratorFactory.php
+│   │   ├── IndexDataBuilder.php          # Data preparation contract
+│   │   └── TextSanitizer.php
+│   ├── Support/
+│   │   ├── MigrationFileInfo.php         # Filename parsing and path resolution contract
+│   │   └── ScalarValueObject.php
+│   └── Writers/
+│       └── FileWriter.php
 ├── DTOs/
 │   ├── BaseDTO.php                       # Abstract base with Arrayable + reflection toArray()
 │   └── MigrationAnalysisResult.php       # Typed immutable analysis output
@@ -294,13 +313,14 @@ src/
 │   └── MarkdownRenderer.php              # Formats structured data as markdown
 ├── Services/
 │   ├── ComplexityCalculator.php          # Pure function: calculates 1-10 score
+│   ├── HtmlSanitizer.php                # HTML entity escaping (implements TextSanitizer)
 │   ├── IndexDataBuilder.php              # Sorts, groups, calculates stats
 │   ├── IndexGenerator.php                # Orchestrates data builder + renderer + writer
 │   ├── MigrationAnalyzer.php             # Orchestrates parsers
 │   ├── PathValidator.php                 # Path traversal protection
 │   └── RendererResolver.php              # Config-based format resolution
 ├── Support/
-│   └── MigrationFileInfo.php            # Timestamp, name, relative path from filename
+│   └── MigrationFileInfo.php            # Timestamp, name, relative path (implements MigrationFileInfo contract)
 ├── Writers/
 │   └── IndexFileWriter.php              # File I/O (implements FileWriter)
 └── MigrationSearcherServiceProvider.php  # Registers interface bindings

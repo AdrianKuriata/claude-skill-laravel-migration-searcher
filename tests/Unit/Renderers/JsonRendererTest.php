@@ -219,4 +219,30 @@ class JsonRendererTest extends TestCase
 
         $this->assertSame(0, $decoded['total_migrations']);
     }
+
+    public function testEncodeEscapesHtmlTags(): void
+    {
+        $data = $this->dataBuilder->buildFullIndex([
+            $this->sampleMigration(['name' => '<script>alert(1)</script>']),
+        ]);
+
+        $output = $this->renderer->renderFullIndex($data);
+
+        $this->assertStringNotContainsString('<script>', $output);
+        $this->assertStringContainsString('\u003C', $output);
+    }
+
+    public function testEncodeEscapesSpecialCharacters(): void
+    {
+        $data = $this->dataBuilder->buildFullIndex([
+            $this->sampleMigration(['name' => 'test & "value" with \'quotes\'']),
+        ]);
+
+        $output = $this->renderer->renderFullIndex($data);
+
+        $this->assertStringNotContainsString('&', $output);
+        $this->assertStringNotContainsString('"value"', $output);
+        $this->assertStringContainsString('\u0026', $output);
+        $this->assertStringContainsString('\u0027', $output);
+    }
 }

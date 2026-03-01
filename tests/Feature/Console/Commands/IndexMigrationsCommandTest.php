@@ -279,6 +279,33 @@ class IndexMigrationsCommandTest extends TestCase
             ->assertSuccessful();
     }
 
+    public function testSkillTemplateRejectsDirectoryPath(): void
+    {
+        $this->app['config']->set('migration-searcher.skill_template_path', sys_get_temp_dir());
+
+        $this->artisan('migrations:index', ['--output' => $this->outputPath])
+            ->expectsOutputToContain('template not found')
+            ->assertSuccessful();
+    }
+
+    public function testSkillTemplateRejectsNonStringConfig(): void
+    {
+        $this->app['config']->set('migration-searcher.skill_template_path', 12345);
+
+        $this->artisan('migrations:index', ['--output' => $this->outputPath])
+            ->expectsOutputToContain('template not found')
+            ->assertSuccessful();
+    }
+
+    public function testSkillTemplateRejectsEmptyString(): void
+    {
+        $this->app['config']->set('migration-searcher.skill_template_path', '');
+
+        $this->artisan('migrations:index', ['--output' => $this->outputPath])
+            ->expectsOutputToContain('template not found')
+            ->assertSuccessful();
+    }
+
     // ── Filtering/Edge Cases ────────────────────────────────────────
 
     public function testSkipsNonPhpFiles(): void
@@ -330,6 +357,17 @@ class IndexMigrationsCommandTest extends TestCase
 
         $perms = fileperms($this->outputPath) & 0777;
         $this->assertSame(0755, $perms);
+    }
+
+    public function testMigrationPathTraversalBlocked(): void
+    {
+        $this->app['config']->set('migration-searcher.migration_types', [
+            'default' => ['path' => '../../etc/passwd'],
+        ]);
+
+        $this->artisan('migrations:index', ['--output' => $this->outputPath])
+            ->expectsOutputToContain('Migration path is outside the project root')
+            ->assertSuccessful();
     }
 
     public function testPathTraversalBlocked(): void
@@ -386,6 +424,25 @@ class IndexMigrationsCommandTest extends TestCase
             ->assertSuccessful();
 
         File::deleteDirectory(base_path(explode('/', str_replace(base_path('/'), '', $outputPath))[0]));
+    }
+
+    public function testRefreshHandlesSpecialCharactersInPath(): void
+    {
+        $specialPath = base_path('test-output-[special]-' . uniqid());
+
+        $this->artisan('migrations:index', ['--output' => $specialPath])
+            ->assertSuccessful();
+
+        $this->assertDirectoryExists($specialPath);
+
+        $this->artisan('migrations:index', [
+            '--output' => $specialPath,
+            '--refresh' => true,
+        ])->assertSuccessful();
+
+        $this->assertFileExists($specialPath . '/index-full.md');
+
+        File::deleteDirectory($specialPath);
     }
 
     // ── Config default path ───────────────────────────────────────

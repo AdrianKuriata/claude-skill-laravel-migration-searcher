@@ -2,8 +2,10 @@
 
 namespace Tests\Unit\Renderers;
 
-use DevSite\LaravelMigrationSearcher\Services\IndexDataBuilder;
+use DevSite\LaravelMigrationSearcher\Renderers\MarkdownMigrationFormatter;
 use DevSite\LaravelMigrationSearcher\Renderers\MarkdownRenderer;
+use DevSite\LaravelMigrationSearcher\Services\HtmlSanitizer;
+use DevSite\LaravelMigrationSearcher\Services\IndexDataBuilder;
 use Tests\TestCase;
 
 class MarkdownRendererTest extends TestCase
@@ -14,7 +16,9 @@ class MarkdownRendererTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->renderer = new MarkdownRenderer();
+        $sanitizer = new HtmlSanitizer();
+        $formatter = new MarkdownMigrationFormatter($sanitizer);
+        $this->renderer = new MarkdownRenderer($formatter, $sanitizer);
         $this->dataBuilder = new IndexDataBuilder();
     }
 
@@ -115,7 +119,7 @@ class MarkdownRendererTest extends TestCase
 
         $data = $this->dataBuilder->buildFullIndex([$migration]);
         $content = $this->renderer->renderFullIndex($data);
-        $this->assertStringContainsString('$user->Eloquent->save()', $content);
+        $this->assertStringContainsString('$user->Eloquent-&gt;save()', $content);
         $this->assertStringContainsString('relation: posts', $content);
     }
 
@@ -153,7 +157,7 @@ class MarkdownRendererTest extends TestCase
         $this->assertStringContainsString('CASE WHEN', $content);
     }
 
-    public function testRenderFullIndexEscapesHtmlInTableNames(): void
+    public function testRenderFullIndexSanitizesTableNames(): void
     {
         $migration = $this->sampleMigration();
         $migration['tables'] = ['<script>xss</script>' => ['operation' => 'CREATE', 'methods' => []]];
@@ -162,7 +166,7 @@ class MarkdownRendererTest extends TestCase
         $content = $this->renderer->renderFullIndex($data);
 
         $this->assertStringNotContainsString('<script>', $content);
-        $this->assertStringContainsString('&lt;script>', $content);
+        $this->assertStringContainsString('&lt;script&gt;', $content);
     }
 
     public function testRenderByTypeIndexContainsTypeHeaders(): void
@@ -282,6 +286,49 @@ class MarkdownRendererTest extends TestCase
 
         $this->assertStringContainsString('**Total migrations:** 0', $content);
         $this->assertStringNotContainsString('## Tables', $content);
+    }
+
+    public function testRenderStatsSanitizesTypeNames(): void
+    {
+        $data = $this->dataBuilder->buildStats([$this->sampleMigration()]);
+        $data['by_type'] = ['<script>alert(1)</script>' => 5];
+
+        $content = $this->renderer->renderStats($data);
+
+        $this->assertStringNotContainsString('<script>', $content);
+        $this->assertStringContainsString('&lt;script&gt;', $content);
+    }
+
+    public function testRenderStatsSanitizesTableNames(): void
+    {
+        $data = $this->dataBuilder->buildStats([$this->sampleMigration()]);
+        $data['tables'] = [
+            '<script>alert(1)</script>' => [
+                'migrations_count' => 1,
+                'operations' => ['CREATE' => 1],
+            ],
+        ];
+
+        $content = $this->renderer->renderStats($data);
+
+        $this->assertStringNotContainsString('<script>alert(1)</script>`', $content);
+        $this->assertStringContainsString('&lt;script&gt;', $content);
+    }
+
+    public function testRenderStatsSanitizesOperationNames(): void
+    {
+        $data = $this->dataBuilder->buildStats([$this->sampleMigration()]);
+        $data['tables'] = [
+            'users' => [
+                'migrations_count' => 1,
+                'operations' => ['<img src=x onerror=alert(1)>' => 1],
+            ],
+        ];
+
+        $content = $this->renderer->renderStats($data);
+
+        $this->assertStringNotContainsString('<img src=x', $content);
+        $this->assertStringContainsString('&lt;img', $content);
     }
 
     public function testRenderByOperationUsesOnInsteadOfPolishNa(): void

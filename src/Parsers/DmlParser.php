@@ -2,16 +2,20 @@
 
 namespace DevSite\LaravelMigrationSearcher\Parsers;
 
-use DevSite\LaravelMigrationSearcher\Contracts\ContentParser;
+use DevSite\LaravelMigrationSearcher\Contracts\Parsers\DmlParser as DmlParserContract;
+use DevSite\LaravelMigrationSearcher\DTOs\DmlOperation;
+use DevSite\LaravelMigrationSearcher\Enums\DmlOperationType;
 
-class DmlParser implements ContentParser
+class DmlParser implements DmlParserContract
 {
+    /** @return DmlOperation[] */
     public function parse(string $content): array
     {
         return $this->extractDMLOperations($content);
     }
 
-    public function extractDMLOperations(string $content): array
+    /** @return DmlOperation[] */
+    protected function extractDMLOperations(string $content): array
     {
         $operations = [];
 
@@ -27,7 +31,7 @@ class DmlParser implements ContentParser
         return $operations;
     }
 
-    public function extractWhereConditions(string $chainedMethods): array
+    protected function extractWhereConditions(string $chainedMethods): array
     {
         $conditions = [];
 
@@ -110,7 +114,7 @@ class DmlParser implements ContentParser
         return $conditions;
     }
 
-    public function extractColumnsFromArray(string $arrayContent): array
+    protected function extractColumnsFromArray(string $arrayContent): array
     {
         $columns = [];
 
@@ -121,7 +125,7 @@ class DmlParser implements ContentParser
         return $columns;
     }
 
-    public function cleanupDataPreview(string $data, int $maxLength = 100): string
+    protected function cleanupDataPreview(string $data, int $maxLength = 100): string
     {
         $data = trim($data);
         $data = preg_replace('/\s+/', ' ', $data);
@@ -136,12 +140,13 @@ class DmlParser implements ContentParser
     public function hasDataModifications(string $content): bool
     {
         return !empty($this->extractDMLOperations($content)) ||
-            strpos($content, 'DB::table') !== false ||
-            strpos($content, '::create(') !== false ||
-            strpos($content, '::update(') !== false ||
-            strpos($content, '::insert(') !== false;
+            str_contains($content, 'DB::table') ||
+            str_contains($content, '::create(') ||
+            str_contains($content, '::update(') ||
+            str_contains($content, '::insert(');
     }
 
+    /** @return DmlOperation[] */
     protected function extractDbTableUpdates(string $content): array
     {
         $operations = [];
@@ -157,7 +162,7 @@ class DmlParser implements ContentParser
                 $chainedMethods = $match[2];
                 $updateData = $match[3];
 
-                $hasDbRaw = strpos($updateData, 'DB::raw') !== false;
+                $hasDbRaw = str_contains($updateData, 'DB::raw');
                 $dbRawSql = [];
                 if ($hasDbRaw) {
                     if (preg_match_all('/DB::raw\s*\(\s*["\'](.+?)["\']\s*\)/s', $updateData, $rawMatches)) {
@@ -165,21 +170,22 @@ class DmlParser implements ContentParser
                     }
                 }
 
-                $operations[] = [
-                    'type' => 'UPDATE',
-                    'table' => $table,
-                    'where_conditions' => $this->extractWhereConditions($chainedMethods),
-                    'columns_updated' => $this->extractColumnsFromArray($updateData),
-                    'has_db_raw' => $hasDbRaw,
-                    'db_raw_expressions' => $dbRawSql,
-                    'data_preview' => $this->cleanupDataPreview($updateData, 150),
-                ];
+                $operations[] = new DmlOperation(
+                    type: DmlOperationType::UPDATE,
+                    table: $table,
+                    dataPreview: $this->cleanupDataPreview($updateData, 150),
+                    whereConditions: $this->extractWhereConditions($chainedMethods),
+                    columnsUpdated: $this->extractColumnsFromArray($updateData),
+                    hasDbRaw: $hasDbRaw,
+                    dbRawExpressions: $dbRawSql,
+                );
             }
         }
 
         return $operations;
     }
 
+    /** @return DmlOperation[] */
     protected function extractDbTableInserts(string $content): array
     {
         $operations = [];
@@ -195,18 +201,19 @@ class DmlParser implements ContentParser
                 $chainedMethods = $match[2];
                 $insertData = $match[3];
 
-                $operations[] = [
-                    'type' => 'INSERT',
-                    'table' => $table,
-                    'where_conditions' => $this->extractWhereConditions($chainedMethods),
-                    'data_preview' => $this->cleanupDataPreview($insertData, 150),
-                ];
+                $operations[] = new DmlOperation(
+                    type: DmlOperationType::INSERT,
+                    table: $table,
+                    dataPreview: $this->cleanupDataPreview($insertData, 150),
+                    whereConditions: $this->extractWhereConditions($chainedMethods),
+                );
             }
         }
 
         return $operations;
     }
 
+    /** @return DmlOperation[] */
     protected function extractDbTableDeletes(string $content): array
     {
         $operations = [];
@@ -221,17 +228,18 @@ class DmlParser implements ContentParser
                 $table = $match[1];
                 $chainedMethods = $match[2];
 
-                $operations[] = [
-                    'type' => 'DELETE',
-                    'table' => $table,
-                    'where_conditions' => $this->extractWhereConditions($chainedMethods),
-                ];
+                $operations[] = new DmlOperation(
+                    type: DmlOperationType::DELETE,
+                    table: $table,
+                    whereConditions: $this->extractWhereConditions($chainedMethods),
+                );
             }
         }
 
         return $operations;
     }
 
+    /** @return DmlOperation[] */
     protected function extractEloquentCreates(string $content): array
     {
         $operations = [];
@@ -243,12 +251,12 @@ class DmlParser implements ContentParser
         )) {
             foreach ($matches[0] as $match) {
                 if (preg_match('/\\\\([A-Z][a-zA-Z]+)::create/', $match, $modelMatch)) {
-                    $operations[] = [
-                        'type' => 'INSERT',
-                        'model' => $modelMatch[1],
-                        'method' => 'Eloquent::create',
-                        'note' => 'Static Model::create() call',
-                    ];
+                    $operations[] = new DmlOperation(
+                        type: DmlOperationType::INSERT,
+                        model: $modelMatch[1],
+                        method: 'Eloquent::create',
+                        note: 'Static Model::create() call',
+                    );
                 }
             }
         }
@@ -256,6 +264,7 @@ class DmlParser implements ContentParser
         return $operations;
     }
 
+    /** @return DmlOperation[] */
     protected function extractEloquentSaves(string $content): array
     {
         $operations = [];
@@ -263,18 +272,19 @@ class DmlParser implements ContentParser
         if (preg_match_all('/\$([a-zA-Z_][a-zA-Z0-9_]*)->save\s*\(\)/', $content, $matches)) {
             $savedVariables = array_unique($matches[1]);
             foreach ($savedVariables as $var) {
-                $operations[] = [
-                    'type' => 'UPDATE/INSERT',
-                    'variable' => '$' . $var,
-                    'method' => 'Eloquent->save()',
-                    'note' => 'Model save - may be INSERT or UPDATE',
-                ];
+                $operations[] = new DmlOperation(
+                    type: DmlOperationType::UPDATE_INSERT,
+                    variable: '$' . $var,
+                    method: 'Eloquent->save()',
+                    note: 'Model save - may be INSERT or UPDATE',
+                );
             }
         }
 
         return $operations;
     }
 
+    /** @return DmlOperation[] */
     protected function extractEloquentRelationCreates(string $content): array
     {
         $operations = [];
@@ -288,19 +298,20 @@ class DmlParser implements ContentParser
             foreach ($matches as $match) {
                 $variable = '$' . $match[1];
                 $relation = $match[2];
-                $operations[] = [
-                    'type' => 'INSERT',
-                    'variable' => $variable,
-                    'relation' => $relation,
-                    'method' => 'Eloquent->relation()->create()',
-                    'note' => "Record creation through {$relation} relationship",
-                ];
+                $operations[] = new DmlOperation(
+                    type: DmlOperationType::INSERT,
+                    variable: $variable,
+                    relation: $relation,
+                    method: 'Eloquent->relation()->create()',
+                    note: "Record creation through {$relation} relationship",
+                );
             }
         }
 
         return $operations;
     }
 
+    /** @return DmlOperation[] */
     protected function extractEloquentDeletes(string $content): array
     {
         $operations = [];
@@ -308,24 +319,25 @@ class DmlParser implements ContentParser
         if (preg_match_all('/\$([a-zA-Z_][a-zA-Z0-9_]*)->(?:each->)?delete\s*\(\)/', $content, $matches)) {
             $deletedVariables = array_unique($matches[1]);
             foreach ($deletedVariables as $var) {
-                $operations[] = [
-                    'type' => 'DELETE',
-                    'variable' => '$' . $var,
-                    'method' => 'Eloquent->delete()',
-                    'note' => 'Model/collection deletion',
-                ];
+                $operations[] = new DmlOperation(
+                    type: DmlOperationType::DELETE,
+                    variable: '$' . $var,
+                    method: 'Eloquent->delete()',
+                    note: 'Model/collection deletion',
+                );
             }
         }
 
         return $operations;
     }
 
+    /** @return DmlOperation[] */
     protected function extractLoopOperations(string $content): array
     {
         $operations = [];
 
         if (preg_match_all(
-            '/foreach\s*\([^)]+\)\s*\{([^}]+(?:\{[^}]+\}[^}]*)*)\}/s',
+            '/foreach\s*\([^)]+\)\s*\{([^}]++(?:\{[^}]*+\}[^}]*+)*+)\}/s',
             $content,
             $matches
         )) {
@@ -349,12 +361,12 @@ class DmlParser implements ContentParser
                 }
 
                 if (!empty($loopOperations)) {
-                    $operations[] = [
-                        'type' => 'LOOP',
-                        'method' => 'foreach',
-                        'operations_in_loop' => $loopOperations,
-                        'note' => 'Loop operations: ' . implode(', ', $loopOperations),
-                    ];
+                    $operations[] = new DmlOperation(
+                        type: DmlOperationType::LOOP,
+                        method: 'foreach',
+                        note: 'Loop operations: ' . implode(', ', $loopOperations),
+                        operationsInLoop: $loopOperations,
+                    );
                 }
             }
         }

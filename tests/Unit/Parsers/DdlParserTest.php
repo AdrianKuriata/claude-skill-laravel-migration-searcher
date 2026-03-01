@@ -2,6 +2,11 @@
 
 namespace Tests\Unit\Parsers;
 
+use DevSite\LaravelMigrationSearcher\DTOs\ColumnDefinition;
+use DevSite\LaravelMigrationSearcher\DTOs\DdlOperation;
+use DevSite\LaravelMigrationSearcher\DTOs\ForeignKeyDefinition;
+use DevSite\LaravelMigrationSearcher\DTOs\IndexDefinition;
+use DevSite\LaravelMigrationSearcher\Enums\DdlCategory;
 use DevSite\LaravelMigrationSearcher\Parsers\DdlParser;
 use PHPUnit\Framework\TestCase;
 
@@ -18,7 +23,7 @@ class DdlParserTest extends TestCase
     public function testParseDelegatesToExtractDDLOperations(): void
     {
         $content = '$table->string(\'name\')';
-        $this->assertSame(
+        $this->assertEquals(
             $this->parser->extractDDLOperations($content),
             $this->parser->parse($content)
         );
@@ -29,51 +34,51 @@ class DdlParserTest extends TestCase
         $content = '$table->id();' . "\n" . '$table->string(\'name\');';
         $ops = $this->parser->extractDDLOperations($content);
 
-        $methods = array_column($ops, 'method');
+        $methods = array_map(fn (DdlOperation $op) => $op->method, $ops);
         $this->assertContains('id', $methods);
         $this->assertContains('string', $methods);
     }
 
     public function testCategorizeMethodColumnCreate(): void
     {
-        $this->assertSame('column_create', $this->parser->categorizeMethod('string'));
-        $this->assertSame('column_create', $this->parser->categorizeMethod('id'));
-        $this->assertSame('column_create', $this->parser->categorizeMethod('foreignId'));
+        $this->assertSame(DdlCategory::COLUMN_CREATE, $this->parser->categorizeMethod('string'));
+        $this->assertSame(DdlCategory::COLUMN_CREATE, $this->parser->categorizeMethod('id'));
+        $this->assertSame(DdlCategory::COLUMN_CREATE, $this->parser->categorizeMethod('foreignId'));
     }
 
     public function testCategorizeMethodColumnModify(): void
     {
-        $this->assertSame('column_modify', $this->parser->categorizeMethod('dropColumn'));
-        $this->assertSame('column_modify', $this->parser->categorizeMethod('renameColumn'));
+        $this->assertSame(DdlCategory::COLUMN_MODIFY, $this->parser->categorizeMethod('dropColumn'));
+        $this->assertSame(DdlCategory::COLUMN_MODIFY, $this->parser->categorizeMethod('renameColumn'));
     }
 
     public function testCategorizeMethodIndex(): void
     {
-        $this->assertSame('index', $this->parser->categorizeMethod('index'));
-        $this->assertSame('index', $this->parser->categorizeMethod('unique'));
-        $this->assertSame('index', $this->parser->categorizeMethod('primary'));
+        $this->assertSame(DdlCategory::INDEX, $this->parser->categorizeMethod('index'));
+        $this->assertSame(DdlCategory::INDEX, $this->parser->categorizeMethod('unique'));
+        $this->assertSame(DdlCategory::INDEX, $this->parser->categorizeMethod('primary'));
     }
 
     public function testCategorizeMethodIndexDrop(): void
     {
-        $this->assertSame('index_drop', $this->parser->categorizeMethod('dropIndex'));
-        $this->assertSame('index_drop', $this->parser->categorizeMethod('dropUnique'));
+        $this->assertSame(DdlCategory::INDEX_DROP, $this->parser->categorizeMethod('dropIndex'));
+        $this->assertSame(DdlCategory::INDEX_DROP, $this->parser->categorizeMethod('dropUnique'));
     }
 
     public function testCategorizeMethodForeignKey(): void
     {
-        $this->assertSame('foreign_key', $this->parser->categorizeMethod('foreign'));
+        $this->assertSame(DdlCategory::FOREIGN_KEY, $this->parser->categorizeMethod('foreign'));
     }
 
     public function testCategorizeMethodForeignKeyDrop(): void
     {
-        $this->assertSame('foreign_key_drop', $this->parser->categorizeMethod('dropForeign'));
+        $this->assertSame(DdlCategory::FOREIGN_KEY_DROP, $this->parser->categorizeMethod('dropForeign'));
     }
 
     public function testCategorizeMethodOther(): void
     {
-        $this->assertSame('other', $this->parser->categorizeMethod('timestamps'));
-        $this->assertSame('other', $this->parser->categorizeMethod('softDeletes'));
+        $this->assertSame(DdlCategory::OTHER, $this->parser->categorizeMethod('timestamps'));
+        $this->assertSame(DdlCategory::OTHER, $this->parser->categorizeMethod('softDeletes'));
     }
 
     public function testParseMethodParamsEmpty(): void
@@ -94,9 +99,11 @@ class DdlParserTest extends TestCase
         $columns = $this->parser->extractColumns($content);
 
         $this->assertArrayHasKey('name', $columns);
-        $this->assertSame('string', $columns['name']['type']);
+        $this->assertInstanceOf(ColumnDefinition::class, $columns['name']);
+        $this->assertSame('string', $columns['name']->type);
         $this->assertArrayHasKey('active', $columns);
-        $this->assertSame('boolean', $columns['active']['type']);
+        $this->assertInstanceOf(ColumnDefinition::class, $columns['active']);
+        $this->assertSame('boolean', $columns['active']->type);
     }
 
     public function testExtractColumnModifiers(): void
@@ -132,8 +139,9 @@ class DdlParserTest extends TestCase
         $indexes = $this->parser->extractIndexes($content);
 
         $this->assertCount(2, $indexes);
-        $this->assertSame('index', $indexes[0]['type']);
-        $this->assertSame('unique', $indexes[1]['type']);
+        $this->assertInstanceOf(IndexDefinition::class, $indexes[0]);
+        $this->assertSame('index', $indexes[0]->type);
+        $this->assertSame('unique', $indexes[1]->type);
     }
 
     public function testExtractForeignKeys(): void
@@ -142,9 +150,10 @@ class DdlParserTest extends TestCase
         $fks = $this->parser->extractForeignKeys($content);
 
         $this->assertCount(1, $fks);
-        $this->assertSame('user_id', $fks[0]['column']);
-        $this->assertSame('id', $fks[0]['references']);
-        $this->assertSame('users', $fks[0]['on_table']);
+        $this->assertInstanceOf(ForeignKeyDefinition::class, $fks[0]);
+        $this->assertSame('user_id', $fks[0]->column);
+        $this->assertSame('id', $fks[0]->references);
+        $this->assertSame('users', $fks[0]->onTable);
     }
 
     public function testExtractForeignKeysPartial(): void
@@ -153,9 +162,9 @@ class DdlParserTest extends TestCase
         $fks = $this->parser->extractForeignKeys($content);
 
         $this->assertCount(1, $fks);
-        $this->assertSame('user_id', $fks[0]['column']);
-        $this->assertNull($fks[0]['references']);
-        $this->assertNull($fks[0]['on_table']);
+        $this->assertSame('user_id', $fks[0]->column);
+        $this->assertNull($fks[0]->references);
+        $this->assertNull($fks[0]->onTable);
     }
 
     public function testExtractMethodsUsed(): void

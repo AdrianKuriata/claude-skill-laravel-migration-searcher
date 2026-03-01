@@ -2,30 +2,34 @@
 
 namespace DevSite\LaravelMigrationSearcher\Services;
 
-use DevSite\LaravelMigrationSearcher\Contracts\Renderer;
-use DevSite\LaravelMigrationSearcher\Contracts\RendererResolver as RendererResolverContract;
-use DevSite\LaravelMigrationSearcher\Renderers\JsonRenderer;
-use DevSite\LaravelMigrationSearcher\Renderers\MarkdownRenderer;
+use DevSite\LaravelMigrationSearcher\Contracts\Renderers\Renderer;
+use DevSite\LaravelMigrationSearcher\Contracts\Renderers\RendererResolver as RendererResolverContract;
+use Illuminate\Contracts\Container\Container;
 
 class RendererResolver implements RendererResolverContract
 {
-    /** @var array<string, class-string<Renderer>> */
-    protected array $defaultFormats = [
-        'markdown' => MarkdownRenderer::class,
-        'json' => JsonRenderer::class,
-    ];
+    /** @param array<string, class-string<Renderer>> $formats */
+    public function __construct(
+        protected array $formats,
+        protected Container $container,
+    ) {
+        $this->formats = array_filter($formats, fn ($class) => is_string($class));
+    }
 
     public function resolve(string $format): ?Renderer
     {
-        $formats = array_merge($this->defaultFormats, config('migration-searcher.formats', []));
-        $class = $formats[$format] ?? null;
+        $class = $this->formats[$format] ?? null;
 
-        return $class ? app($class) : null;
+        if (!is_string($class) || !class_exists($class) || !is_subclass_of($class, Renderer::class)) {
+            return null;
+        }
+
+        return $this->container->make($class);
     }
 
     /** @return string[] */
     public function availableFormats(): array
     {
-        return array_keys(array_merge($this->defaultFormats, config('migration-searcher.formats', [])));
+        return array_keys($this->formats);
     }
 }

@@ -2,13 +2,11 @@
 
 namespace DevSite\LaravelMigrationSearcher\Console\Commands;
 
-use DevSite\LaravelMigrationSearcher\Contracts\FileWriter;
-use DevSite\LaravelMigrationSearcher\Contracts\IndexDataBuilder as IndexDataBuilderContract;
-use DevSite\LaravelMigrationSearcher\Contracts\MigrationAnalyzer as MigrationAnalyzerContract;
-use DevSite\LaravelMigrationSearcher\Contracts\PathValidator as PathValidatorContract;
-use DevSite\LaravelMigrationSearcher\Contracts\Renderer;
-use DevSite\LaravelMigrationSearcher\Contracts\RendererResolver as RendererResolverContract;
-use DevSite\LaravelMigrationSearcher\Services\IndexGenerator;
+use DevSite\LaravelMigrationSearcher\Contracts\Services\IndexGeneratorFactory as IndexGeneratorFactoryContract;
+use DevSite\LaravelMigrationSearcher\Contracts\Services\MigrationAnalyzer as MigrationAnalyzerContract;
+use DevSite\LaravelMigrationSearcher\Contracts\Services\PathValidator as PathValidatorContract;
+use DevSite\LaravelMigrationSearcher\Contracts\Renderers\Renderer;
+use DevSite\LaravelMigrationSearcher\Contracts\Renderers\RendererResolver as RendererResolverContract;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 
@@ -26,19 +24,19 @@ class IndexMigrationsCommand extends Command
 
     public function __construct(
         protected MigrationAnalyzerContract $analyzer,
-        protected IndexDataBuilderContract $dataBuilder,
+        protected IndexGeneratorFactoryContract $generatorFactory,
         protected PathValidatorContract $pathValidator,
         protected RendererResolverContract $rendererResolver,
-        protected FileWriter $fileWriter,
     ) {
-        $this->migrationTypes = config('migration-searcher.migration_types', [
-            'default' => ['path' => 'database/migrations'],
-        ]);
         parent::__construct();
     }
 
     public function handle(): int
     {
+        $this->migrationTypes = config('migration-searcher.migration_types', [
+            'default' => ['path' => 'database/migrations'],
+        ]);
+
         $outputPath = $this->resolveOutputPath();
         if ($outputPath === null) {
             return Command::FAILURE;
@@ -136,10 +134,9 @@ class IndexMigrationsCommand extends Command
     {
         $this->info('Generating index files...');
 
-        $generator = new IndexGenerator($outputPath, $renderer, $this->dataBuilder, $this->fileWriter);
-        $generator->setMigrations($migrations);
+        $generator = $this->generatorFactory->create($outputPath, $renderer);
 
-        return $generator->generateAll();
+        return $generator->generateAll($migrations);
     }
 
     protected function displayGeneratedFiles(array $generated): void
@@ -163,11 +160,27 @@ class IndexMigrationsCommand extends Command
         $this->info('Copying SKILL.md template...');
         $templatePath = config('migration-searcher.skill_template_path');
 
-        if ($templatePath && File::exists($templatePath)) {
-            File::copy($templatePath, $skillPath);
-        } else {
+        if (!$this->isValidTemplatePath($templatePath)) {
             $this->warn('   SKILL.md template not found - you may need to publish package resources');
+            return;
         }
+
+        File::copy($templatePath, $skillPath);
+    }
+
+    protected function isValidTemplatePath(mixed $templatePath): bool
+    {
+        if (!is_string($templatePath) || empty($templatePath)) {
+            return false;
+        }
+
+        $realPath = realpath($templatePath);
+
+        if ($realPath === false) {
+            return false;
+        }
+
+        return is_file($realPath) && is_readable($realPath);
     }
 
     protected function determineTypesToIndex(): ?array
@@ -188,6 +201,11 @@ class IndexMigrationsCommand extends Command
     {
         $typeConfig = $this->migrationTypes[$type];
         $path = base_path($typeConfig['path']);
+
+        if (!$this->pathValidator->isWithinBasePath($path)) {
+            $this->error("Migration path is outside the project root: {$typeConfig['path']}");
+            return [];
+        }
 
         if (!File::exists($path)) {
             $this->warn("   Directory doesn't exist: {$path}");
@@ -227,9 +245,14 @@ class IndexMigrationsCommand extends Command
     protected function cleanGeneratedFiles(string $outputPath): void
     {
         $patterns = ['index-*', 'stats.*'];
+        $escapedPath = str_replace(
+            ['\\', '*', '?', '['],
+            ['\\\\', '\\*', '\\?', '\\['],
+            $outputPath
+        );
 
         foreach ($patterns as $pattern) {
-            foreach (File::glob($outputPath . '/' . $pattern) as $file) {
+            foreach (File::glob($escapedPath . '/' . $pattern) as $file) {
                 File::delete($file);
             }
         }

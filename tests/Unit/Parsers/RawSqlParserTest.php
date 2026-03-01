@@ -2,6 +2,9 @@
 
 namespace Tests\Unit\Parsers;
 
+use DevSite\LaravelMigrationSearcher\DTOs\RawSqlStatement;
+use DevSite\LaravelMigrationSearcher\Enums\RawSqlType;
+use DevSite\LaravelMigrationSearcher\Enums\SqlOperationType;
 use DevSite\LaravelMigrationSearcher\Parsers\RawSqlParser;
 use PHPUnit\Framework\TestCase;
 
@@ -30,8 +33,9 @@ class RawSqlParserTest extends TestCase
         $sql = $this->parser->extractRawSQL($content);
 
         $this->assertCount(1, $sql);
-        $this->assertSame('statement', $sql[0]['type']);
-        $this->assertSame('CREATE', $sql[0]['operation']);
+        $this->assertInstanceOf(RawSqlStatement::class, $sql[0]);
+        $this->assertSame(RawSqlType::STATEMENT, $sql[0]->type);
+        $this->assertSame(SqlOperationType::CREATE, $sql[0]->operation);
     }
 
     public function testExtractsDbUnprepared(): void
@@ -40,8 +44,8 @@ class RawSqlParserTest extends TestCase
         $sql = $this->parser->extractRawSQL($content);
 
         $this->assertCount(1, $sql);
-        $this->assertSame('unprepared', $sql[0]['type']);
-        $this->assertSame('ALTER', $sql[0]['operation']);
+        $this->assertSame(RawSqlType::UNPREPARED, $sql[0]->type);
+        $this->assertSame(SqlOperationType::ALTER, $sql[0]->operation);
     }
 
     public function testExtractsDbRaw(): void
@@ -50,8 +54,8 @@ class RawSqlParserTest extends TestCase
         $sql = $this->parser->extractRawSQL($content);
 
         $this->assertCount(1, $sql);
-        $this->assertSame('raw', $sql[0]['type']);
-        $this->assertSame('EXPRESSION', $sql[0]['operation']);
+        $this->assertSame(RawSqlType::RAW, $sql[0]->type);
+        $this->assertSame(SqlOperationType::EXPRESSION, $sql[0]->operation);
     }
 
     public function testExtractsHeredocSql(): void
@@ -59,7 +63,7 @@ class RawSqlParserTest extends TestCase
         $content = "DB::unprepared(<<<SQL\nSELECT * FROM users\nSQL\n);";
         $sql = $this->parser->extractRawSQL($content);
 
-        $heredocs = array_filter($sql, fn ($s) => $s['type'] === 'heredoc');
+        $heredocs = array_filter($sql, fn (RawSqlStatement $s) => $s->type === RawSqlType::HEREDOC);
         $this->assertNotEmpty($heredocs);
     }
 
@@ -80,15 +84,15 @@ class RawSqlParserTest extends TestCase
     public function testDetectSQLOperations(): void
     {
         $expectations = [
-            'SELECT * FROM users' => 'SELECT',
-            'INSERT INTO users VALUES (1)' => 'INSERT',
-            'UPDATE users SET name = "a"' => 'UPDATE',
-            'DELETE FROM users WHERE id = 1' => 'DELETE',
-            'CREATE TABLE foo (id INT)' => 'CREATE',
-            'ALTER TABLE foo ADD col INT' => 'ALTER',
-            'DROP TABLE foo' => 'DROP',
-            'TRUNCATE TABLE foo' => 'TRUNCATE',
-            'GRANT ALL ON foo TO bar' => 'OTHER',
+            'SELECT * FROM users' => SqlOperationType::SELECT,
+            'INSERT INTO users VALUES (1)' => SqlOperationType::INSERT,
+            'UPDATE users SET name = "a"' => SqlOperationType::UPDATE,
+            'DELETE FROM users WHERE id = 1' => SqlOperationType::DELETE,
+            'CREATE TABLE foo (id INT)' => SqlOperationType::CREATE,
+            'ALTER TABLE foo ADD col INT' => SqlOperationType::ALTER,
+            'DROP TABLE foo' => SqlOperationType::DROP,
+            'TRUNCATE TABLE foo' => SqlOperationType::TRUNCATE,
+            'GRANT ALL ON foo TO bar' => SqlOperationType::OTHER,
         ];
 
         foreach ($expectations as $sql => $expected) {

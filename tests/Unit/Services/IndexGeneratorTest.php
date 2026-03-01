@@ -2,11 +2,13 @@
 
 namespace Tests\Unit\Services;
 
-use DevSite\LaravelMigrationSearcher\Contracts\Renderer;
+use DevSite\LaravelMigrationSearcher\Contracts\Renderers\Renderer;
 use DevSite\LaravelMigrationSearcher\Services\IndexDataBuilder;
 use DevSite\LaravelMigrationSearcher\Services\IndexGenerator;
 use DevSite\LaravelMigrationSearcher\Renderers\JsonRenderer;
+use DevSite\LaravelMigrationSearcher\Renderers\MarkdownMigrationFormatter;
 use DevSite\LaravelMigrationSearcher\Renderers\MarkdownRenderer;
+use DevSite\LaravelMigrationSearcher\Services\HtmlSanitizer;
 use DevSite\LaravelMigrationSearcher\Writers\IndexFileWriter;
 use Illuminate\Support\Facades\File;
 use Tests\TestCase;
@@ -20,9 +22,10 @@ class IndexGeneratorTest extends TestCase
     {
         parent::setUp();
         $this->outputPath = sys_get_temp_dir() . '/index-generator-test-' . uniqid();
+        $sanitizer = new HtmlSanitizer();
         $this->generator = new IndexGenerator(
             $this->outputPath,
-            new MarkdownRenderer(),
+            new MarkdownRenderer(new MarkdownMigrationFormatter($sanitizer), $sanitizer),
             new IndexDataBuilder(),
             new IndexFileWriter(),
         );
@@ -137,8 +140,7 @@ class IndexGeneratorTest extends TestCase
 
     public function testGenerateAllReturnsCorrectPaths(): void
     {
-        $this->generator->setMigrations($this->sampleMigrations());
-        $generated = $this->generator->generateAll();
+        $generated = $this->generator->generateAll($this->sampleMigrations());
 
         $this->assertArrayHasKey('full', $generated);
         $this->assertArrayHasKey('by_type', $generated);
@@ -155,8 +157,7 @@ class IndexGeneratorTest extends TestCase
     {
         $this->assertDirectoryDoesNotExist($this->outputPath);
 
-        $this->generator->setMigrations([]);
-        $this->generator->generateAll();
+        $this->generator->generateAll([]);
 
         $this->assertDirectoryExists($this->outputPath);
     }
@@ -166,8 +167,7 @@ class IndexGeneratorTest extends TestCase
     public function testFullIndexContainsAllMigrations(): void
     {
         $migrations = $this->sampleMigrations();
-        $this->generator->setMigrations($migrations);
-        $this->generator->generateAll();
+        $this->generator->generateAll($migrations);
 
         $content = file_get_contents($this->outputPath . '/index-full.md');
 
@@ -179,8 +179,7 @@ class IndexGeneratorTest extends TestCase
     public function testFullIndexSortedChronologically(): void
     {
         $migrations = $this->sampleMigrations();
-        $this->generator->setMigrations($migrations);
-        $this->generator->generateAll();
+        $this->generator->generateAll($migrations);
 
         $content = file_get_contents($this->outputPath . '/index-full.md');
 
@@ -194,8 +193,7 @@ class IndexGeneratorTest extends TestCase
 
     public function testFullIndexContainsDmlDetails(): void
     {
-        $this->generator->setMigrations($this->sampleMigrations());
-        $this->generator->generateAll();
+        $this->generator->generateAll($this->sampleMigrations());
 
         $content = file_get_contents($this->outputPath . '/index-full.md');
 
@@ -205,8 +203,7 @@ class IndexGeneratorTest extends TestCase
 
     public function testFullIndexContainsRawSqlBlocks(): void
     {
-        $this->generator->setMigrations($this->sampleMigrations());
-        $this->generator->generateAll();
+        $this->generator->generateAll($this->sampleMigrations());
 
         $content = file_get_contents($this->outputPath . '/index-full.md');
 
@@ -216,8 +213,7 @@ class IndexGeneratorTest extends TestCase
 
     public function testFullIndexContainsForeignKeys(): void
     {
-        $this->generator->setMigrations($this->sampleMigrations());
-        $this->generator->generateAll();
+        $this->generator->generateAll($this->sampleMigrations());
 
         $content = file_get_contents($this->outputPath . '/index-full.md');
 
@@ -230,8 +226,7 @@ class IndexGeneratorTest extends TestCase
 
     public function testByTableGroupsByTableName(): void
     {
-        $this->generator->setMigrations($this->sampleMigrations());
-        $this->generator->generateAll();
+        $this->generator->generateAll($this->sampleMigrations());
 
         $content = file_get_contents($this->outputPath . '/index-by-table.md');
 
@@ -242,8 +237,7 @@ class IndexGeneratorTest extends TestCase
     {
         $migrations = $this->sampleMigrations();
         $migrations[0]['tables']['accounts'] = ['operation' => 'CREATE', 'methods' => []];
-        $this->generator->setMigrations($migrations);
-        $this->generator->generateAll();
+        $this->generator->generateAll($migrations);
 
         $content = file_get_contents($this->outputPath . '/index-by-table.md');
 
@@ -257,8 +251,7 @@ class IndexGeneratorTest extends TestCase
 
     public function testByOperationGroupsByOperation(): void
     {
-        $this->generator->setMigrations($this->sampleMigrations());
-        $this->generator->generateAll();
+        $this->generator->generateAll($this->sampleMigrations());
 
         $content = file_get_contents($this->outputPath . '/index-by-operation.md');
 
@@ -268,8 +261,7 @@ class IndexGeneratorTest extends TestCase
 
     public function testByOperationRawSqlSection(): void
     {
-        $this->generator->setMigrations($this->sampleMigrations());
-        $this->generator->generateAll();
+        $this->generator->generateAll($this->sampleMigrations());
 
         $content = file_get_contents($this->outputPath . '/index-by-operation.md');
 
@@ -280,8 +272,7 @@ class IndexGeneratorTest extends TestCase
 
     public function testStatsStructure(): void
     {
-        $this->generator->setMigrations($this->sampleMigrations());
-        $this->generator->generateAll();
+        $this->generator->generateAll($this->sampleMigrations());
 
         $content = file_get_contents($this->outputPath . '/stats.md');
 
@@ -296,8 +287,7 @@ class IndexGeneratorTest extends TestCase
     public function testStatsTotalCount(): void
     {
         $migrations = $this->sampleMigrations();
-        $this->generator->setMigrations($migrations);
-        $this->generator->generateAll();
+        $this->generator->generateAll($migrations);
 
         $content = file_get_contents($this->outputPath . '/stats.md');
 
@@ -306,8 +296,7 @@ class IndexGeneratorTest extends TestCase
 
     public function testStatsComplexityStats(): void
     {
-        $this->generator->setMigrations($this->sampleMigrations());
-        $this->generator->generateAll();
+        $this->generator->generateAll($this->sampleMigrations());
 
         $content = file_get_contents($this->outputPath . '/stats.md');
 
@@ -343,8 +332,7 @@ class IndexGeneratorTest extends TestCase
             ];
         }
 
-        $this->generator->setMigrations($migrations);
-        $this->generator->generateAll();
+        $this->generator->generateAll($migrations);
 
         $content = file_get_contents($this->outputPath . '/stats.md');
 
@@ -355,8 +343,7 @@ class IndexGeneratorTest extends TestCase
 
     public function testEmptyMigrationsArray(): void
     {
-        $this->generator->setMigrations([]);
-        $generated = $this->generator->generateAll();
+        $generated = $this->generator->generateAll([]);
 
         $this->assertCount(5, $generated);
 
@@ -392,8 +379,7 @@ class IndexGeneratorTest extends TestCase
             ],
         ];
 
-        $this->generator->setMigrations($migrations);
-        $generated = $this->generator->generateAll();
+        $generated = $this->generator->generateAll($migrations);
 
         $content = file_get_contents($generated['by_table']);
         $this->assertStringContainsString('Grouped by Tables', $content);
@@ -567,8 +553,7 @@ class IndexGeneratorTest extends TestCase
 
     public function testByTypeIndexContainsSystemType(): void
     {
-        $this->generator->setMigrations($this->fullSampleMigrations());
-        $this->generator->generateAll();
+        $this->generator->generateAll($this->fullSampleMigrations());
 
         $content = file_get_contents($this->outputPath . '/index-by-type.md');
 
@@ -577,8 +562,7 @@ class IndexGeneratorTest extends TestCase
 
     public function testByTypeIndexShowsNoMigrationsMessage(): void
     {
-        $this->generator->setMigrations([]);
-        $this->generator->generateAll();
+        $this->generator->generateAll([]);
 
         $content = file_get_contents($this->outputPath . '/index-by-type.md');
 
@@ -587,8 +571,7 @@ class IndexGeneratorTest extends TestCase
 
     public function testByTypeIndexGroupsDynamically(): void
     {
-        $this->generator->setMigrations($this->sampleMigrations());
-        $this->generator->generateAll();
+        $this->generator->generateAll($this->sampleMigrations());
 
         $content = file_get_contents($this->outputPath . '/index-by-type.md');
 
@@ -599,8 +582,7 @@ class IndexGeneratorTest extends TestCase
 
     public function testFullIndexContainsEloquentModelDml(): void
     {
-        $this->generator->setMigrations($this->fullSampleMigrations());
-        $this->generator->generateAll();
+        $this->generator->generateAll($this->fullSampleMigrations());
 
         $content = file_get_contents($this->outputPath . '/index-full.md');
 
@@ -609,18 +591,16 @@ class IndexGeneratorTest extends TestCase
 
     public function testFullIndexContainsVariableDml(): void
     {
-        $this->generator->setMigrations($this->fullSampleMigrations());
-        $this->generator->generateAll();
+        $this->generator->generateAll($this->fullSampleMigrations());
 
         $content = file_get_contents($this->outputPath . '/index-full.md');
 
-        $this->assertStringContainsString('$post->Eloquent->save()', $content);
+        $this->assertStringContainsString('$post->Eloquent-&gt;save()', $content);
     }
 
     public function testFullIndexContainsVariableDmlWithRelation(): void
     {
-        $this->generator->setMigrations($this->fullSampleMigrations());
-        $this->generator->generateAll();
+        $this->generator->generateAll($this->fullSampleMigrations());
 
         $content = file_get_contents($this->outputPath . '/index-full.md');
 
@@ -629,8 +609,7 @@ class IndexGeneratorTest extends TestCase
 
     public function testFullIndexContainsLoopDml(): void
     {
-        $this->generator->setMigrations($this->fullSampleMigrations());
-        $this->generator->generateAll();
+        $this->generator->generateAll($this->fullSampleMigrations());
 
         $content = file_get_contents($this->outputPath . '/index-full.md');
 
@@ -640,8 +619,7 @@ class IndexGeneratorTest extends TestCase
 
     public function testFullIndexContainsDbRawExpressions(): void
     {
-        $this->generator->setMigrations($this->fullSampleMigrations());
-        $this->generator->generateAll();
+        $this->generator->generateAll($this->fullSampleMigrations());
 
         $content = file_get_contents($this->outputPath . '/index-full.md');
 
@@ -651,18 +629,16 @@ class IndexGeneratorTest extends TestCase
 
     public function testFullIndexContainsDataPreviewWithoutDbRaw(): void
     {
-        $this->generator->setMigrations($this->fullSampleMigrations());
-        $this->generator->generateAll();
+        $this->generator->generateAll($this->fullSampleMigrations());
 
         $content = file_get_contents($this->outputPath . '/index-full.md');
 
-        $this->assertStringContainsString("Data: ['name' => 'updated']", $content);
+        $this->assertStringContainsString("Data: [&#039;name&#039; =&gt; &#039;updated&#039;]", $content);
     }
 
     public function testFullIndexContainsNestedDependencies(): void
     {
-        $this->generator->setMigrations($this->fullSampleMigrations());
-        $this->generator->generateAll();
+        $this->generator->generateAll($this->fullSampleMigrations());
 
         $content = file_get_contents($this->outputPath . '/index-full.md');
 
@@ -674,8 +650,7 @@ class IndexGeneratorTest extends TestCase
 
     public function testByOperationAlterWithColumns(): void
     {
-        $this->generator->setMigrations($this->fullSampleMigrations());
-        $this->generator->generateAll();
+        $this->generator->generateAll($this->fullSampleMigrations());
 
         $content = file_get_contents($this->outputPath . '/index-by-operation.md');
 
@@ -685,8 +660,7 @@ class IndexGeneratorTest extends TestCase
 
     public function testByOperationDataWithWhereConditions(): void
     {
-        $this->generator->setMigrations($this->fullSampleMigrations());
-        $this->generator->generateAll();
+        $this->generator->generateAll($this->fullSampleMigrations());
 
         $content = file_get_contents($this->outputPath . '/index-by-operation.md');
 
@@ -695,8 +669,7 @@ class IndexGeneratorTest extends TestCase
 
     public function testFormatMigrationCompactModifiesDataWarning(): void
     {
-        $this->generator->setMigrations($this->fullSampleMigrations());
-        $this->generator->generateAll();
+        $this->generator->generateAll($this->fullSampleMigrations());
 
         $content = file_get_contents($this->outputPath . '/index-by-type.md');
 
@@ -708,8 +681,7 @@ class IndexGeneratorTest extends TestCase
     public function testGenerateAllUsesRendererFileExtension(): void
     {
         $generator = new IndexGenerator($this->outputPath, new JsonRenderer(), new IndexDataBuilder(), new IndexFileWriter());
-        $generator->setMigrations($this->sampleMigrations());
-        $generated = $generator->generateAll();
+        $generated = $generator->generateAll($this->sampleMigrations());
 
         $this->assertStringEndsWith('/index-full.json', $generated['full']);
         $this->assertStringEndsWith('/index-by-type.json', $generated['by_type']);
@@ -725,8 +697,7 @@ class IndexGeneratorTest extends TestCase
     public function testGenerateAllWithJsonRendererProducesValidJson(): void
     {
         $generator = new IndexGenerator($this->outputPath, new JsonRenderer(), new IndexDataBuilder(), new IndexFileWriter());
-        $generator->setMigrations($this->sampleMigrations());
-        $generated = $generator->generateAll();
+        $generated = $generator->generateAll($this->sampleMigrations());
 
         foreach ($generated as $path) {
             $decoded = json_decode(file_get_contents($path), true);
@@ -736,9 +707,9 @@ class IndexGeneratorTest extends TestCase
 
     public function testGenerateAllWithMarkdownRendererUsesCorrectExtension(): void
     {
-        $generator = new IndexGenerator($this->outputPath, new MarkdownRenderer(), new IndexDataBuilder(), new IndexFileWriter());
-        $generator->setMigrations([]);
-        $generated = $generator->generateAll();
+        $sanitizer = new HtmlSanitizer();
+        $generator = new IndexGenerator($this->outputPath, new MarkdownRenderer(new MarkdownMigrationFormatter($sanitizer), $sanitizer), new IndexDataBuilder(), new IndexFileWriter());
+        $generated = $generator->generateAll([]);
 
         $this->assertStringEndsWith('/index-full.md', $generated['full']);
         $this->assertStringEndsWith('/index-by-type.md', $generated['by_type']);
@@ -746,9 +717,9 @@ class IndexGeneratorTest extends TestCase
 
     public function testStatsUsesRendererExtension(): void
     {
-        $generator = new IndexGenerator($this->outputPath, new MarkdownRenderer(), new IndexDataBuilder(), new IndexFileWriter());
-        $generator->setMigrations($this->sampleMigrations());
-        $generated = $generator->generateAll();
+        $sanitizer = new HtmlSanitizer();
+        $generator = new IndexGenerator($this->outputPath, new MarkdownRenderer(new MarkdownMigrationFormatter($sanitizer), $sanitizer), new IndexDataBuilder(), new IndexFileWriter());
+        $generated = $generator->generateAll($this->sampleMigrations());
 
         $this->assertStringEndsWith('/stats.md', $generated['stats']);
         $content = file_get_contents($generated['stats']);
@@ -766,8 +737,7 @@ class IndexGeneratorTest extends TestCase
         $mockRenderer->method('renderStats')->willReturn('<xml/>');
 
         $generator = new IndexGenerator($this->outputPath, $mockRenderer, new IndexDataBuilder(), new IndexFileWriter());
-        $generator->setMigrations([]);
-        $generated = $generator->generateAll();
+        $generated = $generator->generateAll([]);
 
         $this->assertStringEndsWith('/index-full.xml', $generated['full']);
     }

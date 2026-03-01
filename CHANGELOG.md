@@ -2,6 +2,96 @@
 
 All notable changes to `claude-skill-laravel-migration-searcher` will be documented in this file.
 
+## [3.0.0] - 2026-03-01
+
+### Added
+
+#### Contracts
+- `ComplexityCalculator` — interface for migration complexity scoring
+- `DdlParser` — typed contract for DDL parsing with column/index/FK extraction
+- `DependencyParser` — contract for migration dependency parsing
+- `DmlParser` — typed contract for data modification analysis
+- `MarkdownMigrationFormatter` — interface for migration formatting (full, compact, DML summary)
+- `RawSqlParser` — typed contract for raw SQL detection
+- `TableDetector` — typed contract returning `TableInfo` array
+- `ScalarValueObject` — generic interface for ValueObjects in `BaseDTO::convertValue()` (OCP)
+- `TextSanitizer` — extracted sanitization from `MarkdownMigrationFormatter` (ISP)
+- `IndexGeneratorFactory` — factory for `IndexGenerator` creation (DIP)
+- `MigrationFileInfo` — interface for filename parsing and path resolution (DIP)
+
+#### DTOs
+- `ColumnDefinition` — type and modifiers for table columns
+- `DdlOperation` — typed DDL operations with `DdlCategory` enum
+- `DependencyInfo` — migration dependencies (requires, dependsOn, foreignKeys)
+- `DmlOperation` — DML operations with table, model, conditions, DB::raw tracking
+- `ForeignKeyDefinition` — FK column, references, onTable
+- `IndexDefinition` — index type and definition
+- `RawSqlStatement` — raw SQL with `RawSqlType` and `SqlOperationType` enums
+- `TableInfo` — table operation with `TableOperation` enum
+
+#### Enums
+- `DdlCategory` — column_create, column_modify, index, foreign_key, other
+- `DmlOperationType` — INSERT, UPDATE, DELETE, UPDATE/INSERT, LOOP
+- `RawSqlType` — statement, unprepared, raw, heredoc
+- `SqlOperationType` — SELECT, INSERT, UPDATE, DELETE, CREATE, ALTER, DROP, TRUNCATE, EXPRESSION, OTHER
+- `TableOperation` — CREATE, ALTER, DROP, RENAME, DATA with `label()` method
+
+#### ValueObjects
+- `ComplexityScore` — validated 1–10 integer, implements `ScalarValueObject`
+- `MigrationTimestamp` — validates `YYYY_MM_DD_HHMMSS` format or `'unknown'`, implements `ScalarValueObject`
+
+#### Exceptions
+- `FileSizeLimitExceededException` — thrown when migration file exceeds size limit
+- `InvalidPathException` — thrown for invalid base path
+- `InvalidRendererException` — thrown for invalid renderer class
+- `UnsupportedFormatException` — thrown for unavailable output format
+
+#### Other
+- `IndexGeneratorFactory` service implementation
+- `HtmlSanitizer` service — dedicated implementation of `TextSanitizer` contract (SRP extraction from `MarkdownMigrationFormatter`)
+- `InvalidFileExtensionException` — thrown when non-`.php` file is passed to `MigrationFileInfo::getContents()` or `getFileSize()`
+
+### Changed (BREAKING)
+- Restructured `Contracts/` directory into domain subdirectories: `Parsers/`, `Renderers/`, `Services/`, `Support/`, `Writers/` — all contract namespaces changed accordingly
+- All parsers (`DdlParser`, `DmlParser`, `RawSqlParser`, `TableDetector`) now implement dedicated typed contracts instead of generic `ContentParser`, and return DTO objects instead of arrays
+- `MigrationAnalysisResult` — replaced scalar types with value objects: `timestamp` → `MigrationTimestamp`, `complexity` → `ComplexityScore`, `dependencies` → `DependencyInfo`
+- `ComplexityCalculator` — implements contract, returns `ComplexityScore` instead of `int`
+- `MigrationAnalyzer` — depends on contract interfaces instead of concrete classes, throws `FileSizeLimitExceededException`, `maxFileSize` injected via constructor instead of `config()` call (DIP); no longer uses `File` facade directly — delegates filesystem operations to `MigrationFileInfo`
+- `MigrationFileInfo` contract — added `getFileSize()` and `getContents()` methods (DIP — abstracts filesystem from `MigrationAnalyzer`)
+- `IndexGenerator` contract simplified: `generateAll(array $migrations): array` (removed `setMigrations()`)
+- `MarkdownRenderer` — receives `TextSanitizer` as separate constructor dependency
+- `MarkdownMigrationFormatter` — implements both `MarkdownMigrationFormatter` and `TextSanitizer` contracts; `escapeHtml()` renamed to `sanitize()`
+- `IndexMigrationsCommand` — uses `IndexGeneratorFactory` instead of direct `IndexDataBuilder` + `FileWriter` injection
+- `BaseDTO::convertValue()` — uses `ScalarValueObject` interface instead of hardcoded `ComplexityScore`/`MigrationTimestamp` checks
+- `MarkdownMigrationFormatter` — no longer implements `TextSanitizer`; receives `TextSanitizer` via constructor injection
+- `PathValidator` contract — removed `normalize()` method (was internal implementation detail exposed publicly)
+- `DmlParser` — `extractDMLOperations()`, `extractWhereConditions()`, `extractColumnsFromArray()`, `cleanupDataPreview()` changed from `public` to `protected` (ISP)
+
+### Changed (non-breaking)
+- `RendererResolver::resolve()` validates class existence and type before instantiation (security — prevents arbitrary constructor execution from compromised config)
+- `RendererResolver` constructor — filters out non-string values from formats array (security — prevents autoloader side-effects from corrupted config)
+- `IndexMigrationsCommand::indexMigrationType()` validates migration paths with `PathValidator::isWithinBasePath()` (security — prevents path traversal via config)
+- `InvalidPathException::invalidBasePath()` no longer exposes raw filesystem path in error message (security — information disclosure)
+- `RendererResolver` — formats map injected via constructor instead of hardcoded defaults + `config()` (DIP)
+- `MigrationSearcherServiceProvider` — updated bindings for `MigrationAnalyzer`, `RendererResolver`, `MigrationFileInfo`
+- `MigrationFileInfo::getRelativePath()` — improved path normalization using `str_starts_with()`
+- Parsers use `str_contains()` / `str_starts_with()` instead of `strpos()` for PHP 8+ idioms
+- `ServiceProvider` — `TextSanitizer` binding points to `HtmlSanitizer` instead of `MarkdownMigrationFormatter`
+- `FileSizeLimitExceededException` — removed file size values from error message (security — information disclosure)
+- `InvalidRendererException` — removed class name from error message (security — information disclosure)
+- `DmlParser` — `foreach` regex uses possessive quantifiers to prevent ReDoS
+- `MarkdownRenderer::renderStats()` — sanitizes `$type`, `$table`, and `$op` values (security — prevents HTML injection in generated output)
+- `IndexGenerator` — uses constructor promotion for cleaner code (code quality)
+- `BaseDTO::convertValue()` — added depth guard (max 10 levels) to prevent stack overflow from deeply nested structures (defensive programming)
+- `JsonRenderer::encode()` — added `JSON_HEX_TAG`, `JSON_HEX_AMP`, `JSON_HEX_APOS`, `JSON_HEX_QUOT` flags to prevent XSS in JSON output (security)
+- `RendererResolver` — receives `Container` via constructor injection instead of using `app()` helper (DIP)
+- `MigrationFileInfo::getContents()` and `getFileSize()` — validate `.php` extension before reading file (security — prevents reading arbitrary files)
+- `IndexMigrationsCommand::cleanGeneratedFiles()` — escapes glob special characters (`\`, `*`, `?`, `[`) in output path before passing to `File::glob()` (security — prevents unintended file matching)
+- `IndexMigrationsCommand::copySkillTemplate()` — validates template path with `realpath()`, `is_file()`, and `is_readable()` instead of just `File::exists()` (security — prevents directory traversal and non-file access)
+
+### Removed
+- `escapeHtml()` method from `MarkdownMigrationFormatter` contract (moved to `TextSanitizer::sanitize()`)
+
 ## [2.6.0] - 2026-02-28
 
 ### Changed

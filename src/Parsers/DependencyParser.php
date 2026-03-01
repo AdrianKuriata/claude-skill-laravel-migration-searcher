@@ -2,9 +2,9 @@
 
 namespace DevSite\LaravelMigrationSearcher\Parsers;
 
-use DevSite\LaravelMigrationSearcher\Contracts\ContentParser;
+use DevSite\LaravelMigrationSearcher\Contracts\Parsers\DependencyParser as DependencyParserContract;
 
-class DependencyParser implements ContentParser
+class DependencyParser implements DependencyParserContract
 {
     public function parse(string $content): array
     {
@@ -13,17 +13,19 @@ class DependencyParser implements ContentParser
 
     public function extractDependencies(string $content): array
     {
-        $dependencies = [];
+        $requires = [];
+        $dependsOn = [];
+        $foreignKeys = [];
 
         if (preg_match_all('/@requires?\s+([^\s\n]+)/', $content, $matches)) {
             foreach ($matches[1] as $dep) {
-                $dependencies['requires'][] = $dep;
+                $requires[] = $dep;
             }
         }
 
         if (preg_match_all('/@depends?\s+on\s+([^\s\n]+)/', $content, $matches)) {
             foreach ($matches[1] as $dep) {
-                $dependencies['depends_on'][] = $dep;
+                $dependsOn[] = $dep;
             }
         }
 
@@ -34,7 +36,7 @@ class DependencyParser implements ContentParser
             PREG_SET_ORDER
         )) {
             foreach ($matches as $match) {
-                $dependencies['foreign_keys'][] = [
+                $foreignKeys[] = [
                     'column' => $match[1],
                     'references' => $match[2],
                     'on_table' => $match[3],
@@ -42,6 +44,20 @@ class DependencyParser implements ContentParser
             }
         }
 
-        return $dependencies;
+        $result = [];
+
+        if (!empty($requires)) {
+            $result['requires'] = $requires;
+        }
+
+        if (!empty($dependsOn)) {
+            $result['depends_on'] = $dependsOn;
+        }
+
+        if (!empty($foreignKeys)) {
+            $result['foreign_keys'] = $foreignKeys;
+        }
+
+        return $result;
     }
 }

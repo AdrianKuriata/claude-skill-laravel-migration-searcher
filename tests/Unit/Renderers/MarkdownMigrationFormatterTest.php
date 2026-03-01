@@ -2,17 +2,21 @@
 
 namespace Tests\Unit\Renderers;
 
+use DevSite\LaravelMigrationSearcher\Contracts\Services\TextSanitizer;
 use DevSite\LaravelMigrationSearcher\Renderers\MarkdownMigrationFormatter;
+use DevSite\LaravelMigrationSearcher\Services\HtmlSanitizer;
 use Tests\TestCase;
 
 class MarkdownMigrationFormatterTest extends TestCase
 {
     protected MarkdownMigrationFormatter $formatter;
+    protected TextSanitizer $sanitizer;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->formatter = new MarkdownMigrationFormatter();
+        $this->sanitizer = new HtmlSanitizer();
+        $this->formatter = new MarkdownMigrationFormatter($this->sanitizer);
     }
 
     protected function sampleMigration(): array
@@ -38,28 +42,15 @@ class MarkdownMigrationFormatterTest extends TestCase
         ];
     }
 
-    public function testEscapeHtmlPreventsHtmlInjection(): void
+    public function testFormatterUsesSanitizerForHtmlInjection(): void
     {
-        $this->assertSame(
-            '&lt;script>alert(1)&lt;/script>',
-            $this->formatter->escapeHtml('<script>alert(1)</script>')
-        );
-    }
+        $migration = $this->sampleMigration();
+        $migration['filename'] = '<script>alert(1)</script>.php';
 
-    public function testEscapeHtmlPreservesNormalCharacters(): void
-    {
-        $this->assertSame(
-            'Eloquent->save()',
-            $this->formatter->escapeHtml('Eloquent->save()')
-        );
-    }
+        $content = $this->formatter->formatMigrationFull($migration);
 
-    public function testEscapeHtmlEscapesAmpersand(): void
-    {
-        $this->assertSame(
-            'foo &amp; bar',
-            $this->formatter->escapeHtml('foo & bar')
-        );
+        $this->assertStringNotContainsString('<script>', $content);
+        $this->assertStringContainsString('&lt;script&gt;', $content);
     }
 
     public function testFormatMigrationFullContainsAllSections(): void
@@ -79,7 +70,7 @@ class MarkdownMigrationFormatterTest extends TestCase
         $this->assertStringContainsString('Dependencies:', $content);
     }
 
-    public function testFormatMigrationFullEscapesHtmlInTableNames(): void
+    public function testFormatMigrationFullSanitizesTableNames(): void
     {
         $migration = $this->sampleMigration();
         $migration['tables'] = ['<script>xss</script>' => ['operation' => 'CREATE', 'methods' => []]];
@@ -87,7 +78,7 @@ class MarkdownMigrationFormatterTest extends TestCase
         $content = $this->formatter->formatMigrationFull($migration);
 
         $this->assertStringNotContainsString('<script>', $content);
-        $this->assertStringContainsString('&lt;script>', $content);
+        $this->assertStringContainsString('&lt;script&gt;', $content);
     }
 
     public function testFormatMigrationFullWithTableDml(): void
@@ -112,7 +103,7 @@ class MarkdownMigrationFormatterTest extends TestCase
         $this->assertStringContainsString('on `users`', $content);
         $this->assertStringContainsString('WHERE:', $content);
         $this->assertStringContainsString('Columns: status', $content);
-        $this->assertStringContainsString("Data: ['status' => 'inactive']", $content);
+        $this->assertStringContainsString("Data: [&#039;status&#039; =&gt; &#039;inactive&#039;]", $content);
     }
 
     public function testFormatMigrationFullWithDbRaw(): void
@@ -175,7 +166,7 @@ class MarkdownMigrationFormatterTest extends TestCase
         ];
 
         $content = $this->formatter->formatMigrationFull($migration);
-        $this->assertStringContainsString('$user->Eloquent->save()', $content);
+        $this->assertStringContainsString('$user->Eloquent-&gt;save()', $content);
         $this->assertStringContainsString('relation: posts', $content);
         $this->assertStringContainsString('Save', $content);
     }

@@ -2,7 +2,7 @@
 
 namespace DevSite\LaravelMigrationSearcher\Writers;
 
-use DevSite\LaravelMigrationSearcher\Contracts\FileWriter;
+use DevSite\LaravelMigrationSearcher\Contracts\Writers\FileWriter;
 use Illuminate\Support\Facades\File;
 
 class IndexFileWriter implements FileWriter

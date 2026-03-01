@@ -2,9 +2,14 @@
 
 namespace DevSite\LaravelMigrationSearcher\Parsers;
 
-use DevSite\LaravelMigrationSearcher\Contracts\ContentParser;
+use DevSite\LaravelMigrationSearcher\Contracts\Parsers\DdlParser as DdlParserContract;
+use DevSite\LaravelMigrationSearcher\DTOs\ColumnDefinition;
+use DevSite\LaravelMigrationSearcher\DTOs\DdlOperation;
+use DevSite\LaravelMigrationSearcher\DTOs\ForeignKeyDefinition;
+use DevSite\LaravelMigrationSearcher\DTOs\IndexDefinition;
+use DevSite\LaravelMigrationSearcher\Enums\DdlCategory;
 
-class DdlParser implements ContentParser
+class DdlParser implements DdlParserContract
 {
     protected const array BLUEPRINT_METHODS = [
         'id', 'foreignId', 'bigIncrements', 'bigInteger', 'binary', 'boolean',
@@ -43,11 +48,13 @@ class DdlParser implements ContentParser
         'foreignId', 'id', 'increments', 'bigIncrements',
     ];
 
+    /** @return DdlOperation[] */
     public function parse(string $content): array
     {
         return $this->extractDDLOperations($content);
     }
 
+    /** @return DdlOperation[] */
     public function extractDDLOperations(string $content): array
     {
         $operations = [];
@@ -57,11 +64,11 @@ class DdlParser implements ContentParser
             if (preg_match_all($pattern, $content, $matches, PREG_SET_ORDER)) {
                 foreach ($matches as $match) {
                     $params = $this->parseMethodParams($match[1]);
-                    $operations[] = [
-                        'method' => $method,
-                        'params' => $params,
-                        'category' => $this->categorizeMethod($method),
-                    ];
+                    $operations[] = new DdlOperation(
+                        $method,
+                        $params,
+                        $this->categorizeMethod($method),
+                    );
                 }
             }
         }
@@ -69,15 +76,15 @@ class DdlParser implements ContentParser
         return $operations;
     }
 
-    public function categorizeMethod(string $method): string
+    public function categorizeMethod(string $method): DdlCategory
     {
         foreach (self::CATEGORIES as $category => $methods) {
             if (in_array($method, $methods)) {
-                return $category;
+                return DdlCategory::from($category);
             }
         }
 
-        return 'other';
+        return DdlCategory::OTHER;
     }
 
     public function parseMethodParams(string $params): array
@@ -93,6 +100,7 @@ class DdlParser implements ContentParser
         return array_map('trim', $parts);
     }
 
+    /** @return array<string, ColumnDefinition> */
     public function extractColumns(string $content): array
     {
         $columns = [];
@@ -103,10 +111,7 @@ class DdlParser implements ContentParser
                 foreach ($matches as $match) {
                     $columnName = $match[1];
                     $modifiers = $this->extractColumnModifiers($match[0]);
-                    $columns[$columnName] = [
-                        'type' => $type,
-                        'modifiers' => $modifiers,
-                    ];
+                    $columns[$columnName] = new ColumnDefinition($type, $modifiers);
                 }
             }
         }
@@ -118,47 +123,49 @@ class DdlParser implements ContentParser
     {
         $modifiers = [];
 
-        if (strpos($columnDefinition, '->nullable()') !== false) {
+        if (str_contains($columnDefinition, '->nullable()')) {
             $modifiers[] = 'nullable';
         }
         if (preg_match('/->default\(([^)]+)\)/', $columnDefinition, $matches)) {
             $modifiers[] = 'default(' . trim($matches[1]) . ')';
         }
-        if (strpos($columnDefinition, '->unique()') !== false) {
+        if (str_contains($columnDefinition, '->unique()')) {
             $modifiers[] = 'unique';
         }
-        if (strpos($columnDefinition, '->unsigned()') !== false) {
+        if (str_contains($columnDefinition, '->unsigned()')) {
             $modifiers[] = 'unsigned';
         }
-        if (strpos($columnDefinition, '->index()') !== false) {
+        if (str_contains($columnDefinition, '->index()')) {
             $modifiers[] = 'indexed';
         }
-        if (strpos($columnDefinition, '->primary()') !== false) {
+        if (str_contains($columnDefinition, '->primary()')) {
             $modifiers[] = 'primary';
         }
 
         return $modifiers;
     }
 
+    /** @return IndexDefinition[] */
     public function extractIndexes(string $content): array
     {
         $indexes = [];
 
         if (preg_match_all('/->index\s*\(\s*([^)]+)\)/', $content, $matches)) {
             foreach ($matches[1] as $indexDef) {
-                $indexes[] = ['type' => 'index', 'definition' => trim($indexDef)];
+                $indexes[] = new IndexDefinition('index', trim($indexDef));
             }
         }
 
         if (preg_match_all('/->unique\s*\(\s*([^)]+)\)/', $content, $matches)) {
             foreach ($matches[1] as $indexDef) {
-                $indexes[] = ['type' => 'unique', 'definition' => trim($indexDef)];
+                $indexes[] = new IndexDefinition('unique', trim($indexDef));
             }
         }
 
         return $indexes;
     }
 
+    /** @return ForeignKeyDefinition[] */
     public function extractForeignKeys(string $content): array
     {
         $foreignKeys = [];
@@ -170,17 +177,18 @@ class DdlParser implements ContentParser
             PREG_SET_ORDER
         )) {
             foreach ($matches as $match) {
-                $foreignKeys[] = [
-                    'column' => $match[1],
-                    'references' => $match[2] ?? null,
-                    'on_table' => $match[3] ?? null,
-                ];
+                $foreignKeys[] = new ForeignKeyDefinition(
+                    $match[1],
+                    $match[2] ?? null,
+                    $match[3] ?? null,
+                );
             }
         }
 
         return $foreignKeys;
     }
 
+    /** @return string[] */
     public function extractMethodsUsed(string $content): array
     {
         $methods = [];

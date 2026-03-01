@@ -2,7 +2,11 @@
 
 namespace DevSite\LaravelMigrationSearcher\Support;
 
-class MigrationFileInfo
+use DevSite\LaravelMigrationSearcher\Contracts\Support\MigrationFileInfo as MigrationFileInfoContract;
+use DevSite\LaravelMigrationSearcher\Exceptions\InvalidFileExtensionException;
+use Illuminate\Support\Facades\File;
+
+class MigrationFileInfo implements MigrationFileInfoContract
 {
     public function extractTimestamp(string $filename): string
     {
@@ -24,12 +28,33 @@ class MigrationFileInfo
 
     public function getRelativePath(string $filepath): string
     {
-        $basePath = base_path();
+        $basePath = rtrim(base_path(), '/') . '/';
 
-        if (strpos($filepath, $basePath) === 0) {
-            return ltrim(substr($filepath, strlen($basePath)), '/');
+        if (str_starts_with($filepath, $basePath)) {
+            return substr($filepath, strlen($basePath));
         }
 
         return $filepath;
+    }
+
+    public function getFileSize(string $filepath): int
+    {
+        $this->validateExtension($filepath);
+
+        return File::size($filepath);
+    }
+
+    public function getContents(string $filepath): string
+    {
+        $this->validateExtension($filepath);
+
+        return File::get($filepath);
+    }
+
+    private function validateExtension(string $filepath): void
+    {
+        if (pathinfo($filepath, PATHINFO_EXTENSION) !== 'php') {
+            throw InvalidFileExtensionException::create();
+        }
     }
 }
