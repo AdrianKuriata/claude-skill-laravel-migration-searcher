@@ -2,6 +2,11 @@
 
 All notable changes to `claude-skill-laravel-migration-searcher` will be documented in this file.
 
+## [3.0.3] - 2026-10-26
+
+### Added
+- Laravel 13 support (`illuminate/*` ^13, `orchestra/testbench` ^11)
+
 ## [3.0.2] - 2026-03-01
 
 ### Changed
